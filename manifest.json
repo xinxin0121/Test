@@ -1,0 +1,12 @@
+{
+  "name": "老黄历",
+  "short_name": "老黄历",
+  "description": "农历、干支、生肖、节气、宜忌 —— 每日老黄历",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#8a1f11",
+  "theme_color": "#8a1f11",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
