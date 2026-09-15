@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>main.py — project — Visual Studio Code</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#1e1e1e;color:#d4d4d4;font-family:Consolas,'Courier New',monospace;font-size:14px;overflow:hidden;height:100vh;display:flex;flex-direction:column;user-select:none}
+
+/* 顶部标题栏 */
+.titlebar{background:#323233;height:30px;display:flex;align-items:center;padding:0 12px;font-size:12px;color:#999}
+.titlebar .dots{display:flex;gap:6px;margin-right:12px}
+.titlebar .dot{width:12px;height:12px;border-radius:50%}
+.dot-r{background:#ff5f57}.dot-y{background:#ffbd2e}.dot-g{background:#28c840}
+
+/* Tab 栏 */
+.tabs{background:#252526;display:flex;height:35px;border-bottom:1px solid #1e1e1e}
+.tab{padding:0 16px;height:100%;display:flex;align-items:center;font-size:13px;color:#969696;border-right:1px solid #1e1e1e;cursor:default}
+.tab.active{background:#1e1e1e;color:#fff;border-bottom:none}
+.tab .icon{margin-right:6px;font-size:12px}
+.tab .py{color:#4ec9b0}.tab .json{color:#cbcb41}
+
+/* 主体 */
+.main{display:flex;flex:1;overflow:hidden}
+
+/* 侧边栏 */
+.sidebar{width:48px;background:#333;display:flex;flex-direction:column;align-items:center;padding-top:10px;gap:18px}
+.sidebar .si{width:24px;height:24px;opacity:.5;display:flex;align-items:center;justify-content:center;font-size:18px}
+.sidebar .si:first-child{opacity:1}
+
+/* 文件树 */
+.explorer{width:200px;background:#252526;border-right:1px solid #1e1e1e;padding:8px 0;font-size:13px}
+.explorer .title{padding:4px 12px;font-size:11px;text-transform:uppercase;color:#bbb;letter-spacing:1px;font-weight:600}
+.explorer .file{padding:3px 12px 3px 24px;color:#ccc;cursor:default;white-space:nowrap}
+.explorer .file:hover{background:#2a2d2e}
+.explorer .file.active{background:#37373d}
+.explorer .folder{padding:3px 12px;color:#ccc;cursor:default}
+.explorer .folder::before{content:'▸ ';font-size:10px}
+.explorer .folder.open::before{content:'▾ '}
+
+/* 编辑器区域 */
+.editor-area{flex:1;display:flex;flex-direction:column;position:relative}
+.editor{flex:1;position:relative;overflow:hidden}
+
+/* 行号+代码行(装饰用) */
+.lines{position:absolute;top:0;left:0;right:0;bottom:0;padding:4px 0}
+.line{display:flex;height:20px;line-height:20px}
+.line .ln{width:50px;text-align:right;padding-right:12px;color:#858585;font-size:13px;flex-shrink:0}
+.line .code{white-space:pre;font-size:14px}
+
+/* 语法高亮色 */
+.kw{color:#569cd6}.fn{color:#dcdcaa}.st{color:#ce9178}.cm{color:#6a9955}.nu{color:#b5cea8}.op{color:#d4d4d4}.ty{color:#4ec9b0}.dec{color:#c586c0}.var{color:#9cdcfe}
+
+/* 游戏画布叠加在编辑器上 */
+#gameCanvas{position:absolute;top:0;left:50px;right:0;bottom:0;z-index:10}
+
+/* 底部状态栏 */
+.statusbar{height:22px;background:#007acc;display:flex;align-items:center;padding:0 10px;font-size:12px;color:#fff;justify-content:space-between}
+.statusbar .left,.statusbar .right{display:flex;gap:14px}
+
+/* 暂停覆盖层(假装是正常代码) */
+.pause-overlay{position:absolute;top:0;left:0;right:0;bottom:0;z-index:20;background:#1e1e1e;padding:4px 0;display:none}
+.pause-overlay.show{display:block}
+
+/* 游戏结束/开始提示 */
+.game-msg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:15;background:rgba(30,30,30,.92);border:1px solid #555;padding:20px 32px;border-radius:6px;text-align:center;font-size:14px;color:#d4d4d4;display:none}
+.game-msg.show{display:block}
+.game-msg .title{font-size:16px;color:#569cd6;margin-bottom:8px}
+.game-msg kbd{background:#333;padding:2px 8px;border-radius:3px;border:1px solid #555;font-family:inherit;color:#fff}
+</style>
+</head>
+<body>
+
+<!-- 标题栏 -->
+<div class="titlebar">
+  <div class="dots"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div></div>
+  <span>main.py — project — Visual Studio Code</span>
+</div>
+
+<!-- Tab 栏 -->
+<div class="tabs">
+  <div class="tab active"><span class="icon py">🐍</span>main.py</div>
+  <div class="tab"><span class="icon json">{}</span>config.json</div>
+  <div class="tab"><span class="icon">📄</span>README.md</div>
+</div>
+
+<!-- 主体 -->
+<div class="main">
+  <!-- 侧边栏图标 -->
+  <div class="sidebar">
+    <div class="si">📁</div>
+    <div class="si">🔍</div>
+    <div class="si">🔀</div>
+    <div class="si">🐛</div>
+    <div class="si">📦</div>
+  </div>
+
+  <!-- 文件树 -->
+  <div class="explorer">
+    <div class="title">Explorer</div>
+    <div class="folder open">project</div>
+    <div class="file">📄 .gitignore</div>
+    <div class="file active">🐍 main.py</div>
+    <div class="file">📋 config.json</div>
+    <div class="file">📄 README.md</div>
+    <div class="file">📄 requirements.txt</div>
+    <div class="folder">tests</div>
+    <div class="folder">utils</div>
+  </div>
+
+  <!-- 编辑器 -->
+  <div class="editor-area">
+    <div class="editor" id="editor">
+      <div class="lines" id="codeLines"></div>
+      <canvas id="gameCanvas"></canvas>
+      <div class="pause-overlay" id="pauseOverlay"></div>
+      <div class="game-msg show" id="gameMsg">
+        <div class="title">// 准备好了吗?</div>
+        <div>按 <kbd>空格</kbd> 开始<br><br>
+        <kbd>↑↓←→</kbd> 或 <kbd>WASD</kbd> 控制方向<br>
+        <kbd>Esc</kbd> 暂停(瞬间变回代码)<br><br>
+        <span style="color:#6a9955">// 看起来你在写代码...</span></div>
+      </div>
+    </div>
+
+    <!-- 状态栏 -->
+    <div class="statusbar">
+      <div class="left">
+        <span>🔀 main</span>
+        <span>✓ 0 ✕ 0</span>
+      </div>
+      <div class="right">
+        <span id="scorebar">Ln 1, Col 1</span>
+        <span>UTF-8</span>
+        <span>Python</span>
+        <span>🔔</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+// ===== 假代码行(装饰用,暂停时也显示这些) =====
+var fakeCode = [
+  ['<span class="cm"># -*- coding: utf-8 -*-</span>'],
+  ['<span class="cm">"""</span>'],
+  ['<span class="cm">Data processing pipeline — main entry point</span>'],
+  ['<span class="cm">Author: xinxin0121</span>'],
+  ['<span class="cm">"""</span>'],
+  [''],
+  ['<span class="kw">import</span> os'],
+  ['<span class="kw">import</span> sys'],
+  ['<span class="kw">import</span> json'],
+  ['<span class="kw">import</span> logging'],
+  ['<span class="kw">from</span> datetime <span class="kw">import</span> datetime, timedelta'],
+  ['<span class="kw">from</span> pathlib <span class="kw">import</span> Path'],
+  ['<span class="kw">from</span> typing <span class="kw">import</span> <span class="ty">List</span>, <span class="ty">Dict</span>, <span class="ty">Optional</span>'],
+  [''],
+  ['<span class="kw">from</span> config <span class="kw">import</span> Settings, DatabaseConfig'],
+  ['<span class="kw">from</span> utils.helpers <span class="kw">import</span> validate_input, format_output'],
+  ['<span class="kw">from</span> utils.db <span class="kw">import</span> get_connection, execute_query'],
+  [''],
+  [''],
+  ['<span class="var">logger</span> = logging.<span class="fn">getLogger</span>(<span class="st">__name__</span>)'],
+  ['<span class="var">BASE_DIR</span> = Path(__file__).resolve().parent'],
+  ['<span class="var">CONFIG_PATH</span> = BASE_DIR / <span class="st">"config.json"</span>'],
+  [''],
+  [''],
+  ['<span class="kw">class</span> <span class="ty">DataProcessor</span>:'],
+  ['    <span class="cm">"""Main data processing class."""</span>'],
+  [''],
+  ['    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="var">self</span>, config: <span class="ty">Settings</span>):'],
+  ['        <span class="var">self</span>.config = config'],
+  ['        <span class="var">self</span>.conn = <span class="kw">None</span>'],
+  ['        <span class="var">self</span>.batch_size = config.batch_size <span class="kw">or</span> <span class="nu">1000</span>'],
+  ['        <span class="var">self</span>._cache: <span class="ty">Dict</span>[str, <span class="ty">Any</span>] = {}'],
+  ['        logger.<span class="fn">info</span>(<span class="st">"Processor initialized with batch_size=%d"</span>, <span class="var">self</span>.batch_size)'],
+  [''],
+  ['    <span class="kw">def</span> <span class="fn">connect</span>(<span class="var">self</span>) -> <span class="kw">None</span>:'],
+  ['        <span class="cm">"""Establish database connection."""</span>'],
+  ['        <span class="kw">try</span>:'],
+  ['            <span class="var">self</span>.conn = <span class="fn">get_connection</span>(<span class="var">self</span>.config.db)'],
+  ['            logger.<span class="fn">info</span>(<span class="st">"Connected to %s"</span>, <span class="var">self</span>.config.db.host)'],
+  ['        <span class="kw">except</span> <span class="ty">Exception</span> <span class="kw">as</span> e:'],
+  ['            logger.<span class="fn">error</span>(<span class="st">"Connection failed: %s"</span>, e)'],
+  ['            <span class="kw">raise</span>'],
+  [''],
+  ['    <span class="kw">def</span> <span class="fn">process_batch</span>(<span class="var">self</span>, records: <span class="ty">List</span>[<span class="ty">Dict</span>]) -> <span class="ty">List</span>[<span class="ty">Dict</span>]:'],
+  ['        <span class="cm">"""Process a batch of records."""</span>'],
+  ['        results = []'],
+  ['        <span class="kw">for</span> i, record <span class="kw">in</span> <span class="fn">enumerate</span>(records):'],
+  ['            <span class="kw">if</span> <span class="kw">not</span> <span class="fn">validate_input</span>(record):'],
+  ['                logger.<span class="fn">warning</span>(<span class="st">"Skip invalid record #%d"</span>, i)'],
+  ['                <span class="kw">continue</span>'],
+  ['            transformed = <span class="var">self</span>.<span class="fn">_transform</span>(record)'],
+  ['            results.<span class="fn">append</span>(<span class="fn">format_output</span>(transformed))'],
+  ['        <span class="kw">return</span> results'],
+  [''],
+  ['    <span class="kw">def</span> <span class="fn">_transform</span>(<span class="var">self</span>, record: <span class="ty">Dict</span>) -> <span class="ty">Dict</span>:'],
+  ['        <span class="cm">"""Apply transformation rules."""</span>'],
+  ['        key = record.<span class="fn">get</span>(<span class="st">"id"</span>, <span class="st">""</span>)'],
+  ['        <span class="kw">if</span> key <span class="kw">in</span> <span class="var">self</span>._cache:'],
+  ['            <span class="kw">return</span> <span class="var">self</span>._cache[key]'],
+  ['        result = {'],
+  ['            <span class="st">"id"</span>: key,'],
+  ['            <span class="st">"timestamp"</span>: datetime.<span class="fn">utcnow</span>().<span class="fn">isoformat</span>(),'],
+  ['            <span class="st">"value"</span>: record.<span class="fn">get</span>(<span class="st">"amount"</span>, <span class="nu">0</span>) * <span class="nu">1.08</span>,'],
+  ['            <span class="st">"status"</span>: <span class="st">"processed"</span>,'],
+  ['        }'],
+  ['        <span class="var">self</span>._cache[key] = result'],
+  ['        <span class="kw">return</span> result'],
+];
+
+var codeLines = document.getElementById('codeLines');
+var pauseOverlay = document.getElementById('pauseOverlay');
+
+function renderFakeCode(container) {
+  container.innerHTML = '';
+  for (var i = 0; i < fakeCode.length; i++) {
+    var div = document.createElement('div');
+    div.className = 'line';
+    div.innerHTML = '<span class="ln">' + (i+1) + '</span><span class="code">' + fakeCode[i][0] + '</span>';
+    container.appendChild(div);
+  }
+}
+renderFakeCode(codeLines);
+renderFakeCode(pauseOverlay);
+
+// ===== 贪吃蛇游戏 =====
+var canvas = document.getElementById('gameCanvas');
+var ctx = canvas.getContext('2d');
+var msg = document.getElementById('gameMsg');
+var scorebar = document.getElementById('scorebar');
+
+var CELL = 20;
+var cols, rows;
+var snake, dir, nextDir, food, score, alive, started, paused, speed, timer;
+
+function resize() {
+  var r = canvas.parentElement.getBoundingClientRect();
+  var w = r.width - 50; // 减去行号宽度
+  var h = r.height;
+  canvas.width = w;
+  canvas.height = h;
+  cols = Math.floor(w / CELL);
+  rows = Math.floor(h / CELL);
+}
+
+function init() {
+  resize();
+  var midX = Math.floor(cols / 2);
+  var midY = Math.floor(rows / 2);
+  snake = [{x:midX,y:midY},{x:midX-1,y:midY},{x:midX-2,y:midY}];
+  dir = {x:1,y:0};
+  nextDir = {x:1,y:0};
+  score = 0;
+  alive = true;
+  speed = 120;
+  placeFood();
+  updateScore();
+}
+
+function placeFood() {
+  var tries = 0;
+  do {
+    food = {x: Math.floor(Math.random()*cols), y: Math.floor(Math.random()*rows)};
+    tries++;
+  } while (onSnake(food.x, food.y) && tries < 500);
+}
+
+function onSnake(x, y) {
+  for (var i = 0; i < snake.length; i++) {
+    if (snake[i].x === x && snake[i].y === y) return true;
+  }
+  return false;
+}
+
+function updateScore() {
+  scorebar.textContent = 'Ln ' + (score + 1) + ', Col ' + snake.length;
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // 半透明背景让假代码若隐若现
+  ctx.fillStyle = 'rgba(30,30,30,0.88)';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // 网格线(很淡,像编辑器的缩进线)
+  ctx.strokeStyle = 'rgba(60,60,60,0.3)';
+  ctx.lineWidth = 0.5;
+  for (var x = 0; x < cols; x++) {
+    if (x % 4 === 0) {
+      ctx.beginPath();
+      ctx.moveTo(x*CELL, 0);
+      ctx.lineTo(x*CELL, canvas.height);
+      ctx.stroke();
+    }
+  }
+
+  // 食物(画成一个高亮关键字)
+  ctx.fillStyle = '#ce9178'; // 字符串橙色
+  ctx.font = '14px Consolas';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('●', food.x * CELL + CELL/2, food.y * CELL + CELL/2);
+
+  // 蛇身(画成蓝色关键字色块)
+  for (var i = 0; i < snake.length; i++) {
+    var s = snake[i];
+    if (i === 0) {
+      // 蛇头
+      ctx.fillStyle = '#569cd6';
+      ctx.fillRect(s.x*CELL+1, s.y*CELL+1, CELL-2, CELL-2);
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 12px Consolas';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('>', s.x*CELL+CELL/2, s.y*CELL+CELL/2);
+    } else {
+      // 蛇身用不同深浅的蓝
+      var alpha = 0.9 - (i / snake.length) * 0.5;
+      ctx.fillStyle = 'rgba(86,156,214,' + alpha + ')';
+      ctx.fillRect(s.x*CELL+1, s.y*CELL+1, CELL-2, CELL-2);
+    }
+  }
+}
+
+function step() {
+  if (!alive || paused) return;
+
+  dir = nextDir;
+  var head = {x: snake[0].x + dir.x, y: snake[0].y + dir.y};
+
+  // 穿墙
+  if (head.x < 0) head.x = cols - 1;
+  if (head.x >= cols) head.x = 0;
+  if (head.y < 0) head.y = rows - 1;
+  if (head.y >= rows) head.y = 0;
+
+  // 撞自己
+  if (onSnake(head.x, head.y)) {
+    alive = false;
+    draw();
+    msg.innerHTML = '<div class="title">// SyntaxError: 撞到自己了</div>' +
+      '得分: <span style="color:#b5cea8">' + score + '</span><br><br>' +
+      '按 <kbd>空格</kbd> 重新开始<br><kbd>Esc</kbd> 回到代码';
+    msg.classList.add('show');
+    clearInterval(timer);
+    return;
+  }
+
+  snake.unshift(head);
+
+  // 吃到食物
+  if (head.x === food.x && head.y === food.y) {
+    score++;
+    updateScore();
+    placeFood();
+    // 加速
+    if (speed > 60) {
+      speed -= 2;
+      clearInterval(timer);
+      timer = setInterval(step, speed);
+    }
+  } else {
+    snake.pop();
+  }
+
+  draw();
+}
+
+function togglePause() {
+  if (!started) return;
+  paused = !paused;
+  pauseOverlay.classList.toggle('show', paused);
+  canvas.style.opacity = paused ? '0' : '1';
+  msg.classList.remove('show');
+}
+
+function startGame() {
+  init();
+  started = true;
+  paused = false;
+  pauseOverlay.classList.remove('show');
+  canvas.style.opacity = '1';
+  msg.classList.remove('show');
+  clearInterval(timer);
+  timer = setInterval(step, speed);
+  draw();
+}
+
+// ===== 键盘控制 =====
+document.addEventListener('keydown', function(e) {
+  var k = e.key;
+
+  // 空格：开始/重新开始
+  if (k === ' ') {
+    e.preventDefault();
+    if (!started || !alive) {
+      startGame();
+    } else if (paused) {
+      togglePause();
+    }
+    return;
+  }
+
+  // Esc：暂停(瞬间伪装)
+  if (k === 'Escape') {
+    e.preventDefault();
+    if (started && alive) togglePause();
+    else if (!alive) {
+      // 游戏结束时按 Esc 也回到代码
+      msg.classList.remove('show');
+      pauseOverlay.classList.add('show');
+      canvas.style.opacity = '0';
+      paused = true;
+      started = true;
+      alive = true;
+    }
+    return;
+  }
+
+  if (paused || !alive || !started) return;
+
+  // 方向
+  switch(k) {
+    case 'ArrowUp': case 'w': case 'W':
+      if (dir.y !== 1) nextDir = {x:0,y:-1};
+      break;
+    case 'ArrowDown': case 's': case 'S':
+      if (dir.y !== -1) nextDir = {x:0,y:1};
+      break;
+    case 'ArrowLeft': case 'a': case 'A':
+      if (dir.x !== 1) nextDir = {x:-1,y:0};
+      break;
+    case 'ArrowRight': case 'd': case 'D':
+      if (dir.x !== -1) nextDir = {x:1,y:0};
+      break;
+  }
+  e.preventDefault();
+});
+
+window.addEventListener('resize', function() {
+  resize();
+  if (started && !paused) draw();
+});
+
+init();
+})();
+</script>
+</body>
+</html>

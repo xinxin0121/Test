@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>data_analysis.ipynb — Jupyter</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#fff;color:#000;font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;font-size:14px;height:100vh;overflow:auto;user-select:none}
+
+/* Jupyter 顶栏 */
+.jp-top{background:#f7f7f7;border-bottom:1px solid #e0e0e0;padding:6px 14px;display:flex;align-items:center;gap:10px}
+.jp-logo{color:#f37626;font-weight:700;font-size:18px}
+.jp-logo span{color:#767677;font-weight:400;font-size:15px}
+.jp-menu{display:flex;gap:16px;font-size:13px;color:#333;margin-left:20px}
+.jp-menu span{cursor:default}
+
+/* 工具栏 */
+.jp-toolbar{background:#fff;border-bottom:1px solid #e0e0e0;padding:5px 14px;display:flex;align-items:center;gap:8px;font-size:13px;color:#616161}
+.jp-btn{padding:3px 8px;border:1px solid #ccc;border-radius:3px;background:#fff;cursor:default}
+
+/* notebook 主体 */
+.nb{max-width:900px;margin:0 auto;padding:16px}
+
+/* cell */
+.cell{display:flex;margin-bottom:8px;align-items:flex-start}
+.prompt{width:70px;flex-shrink:0;color:#303f9f;font-family:monospace;font-size:13px;text-align:right;padding-right:8px;padding-top:5px}
+.cell-body{flex:1;border:1px solid #cfcfcf;border-radius:2px}
+
+/* code cell */
+.code-cell .cell-body{background:#f7f7f7;padding:8px 12px;font-family:'Consolas',monospace;font-size:13px;line-height:1.5}
+.kw{color:#008000;font-weight:600}.st{color:#ba2121}.fn{color:#0000ff}.cm{color:#408080;font-style:italic}.nu{color:#080}
+
+/* output: 我们的扫雷表格 */
+.out-cell .cell-body{background:#fff;padding:10px}
+.out-label{color:#bb2222;font-family:monospace;font-size:12px;margin-bottom:6px}
+
+/* 扫雷网格伪装成 dataframe */
+table.df{border-collapse:collapse;font-family:'Consolas',monospace;font-size:13px;margin:0 auto}
+table.df th{background:#f0f0f0;border:1px solid #ddd;padding:2px 0;font-weight:600;color:#555;width:26px;height:22px;text-align:center;font-size:11px}
+table.df td{border:1px solid #ddd;width:26px;height:26px;text-align:center;cursor:pointer;color:#333;background:#fafafa}
+table.df td.idx{background:#f0f0f0;font-weight:600;color:#555;cursor:default;width:34px;font-size:11px}
+table.df td.hidden-cell{background:#e8eaf0}
+table.df td.hidden-cell:hover{background:#d0d5e5}
+table.df td.revealed{background:#fff;cursor:default}
+table.df td.mine{background:#ffcdd2;color:#c62828;font-weight:700}
+table.df td.flag{background:#fff9c4;color:#f57f17}
+/* 数字颜色(像数据) */
+.n1{color:#1976d2}.n2{color:#388e3c}.n3{color:#d32f2f}.n4{color:#7b1fa2}.n5{color:#c2185b}.n6{color:#0097a7}.n7{color:#455a64}.n8{color:#000}
+
+.statline{font-family:'Consolas',monospace;font-size:12px;color:#333;margin-top:8px}
+.hintbar{max-width:900px;margin:0 auto;padding:0 16px 30px;font-size:12px;color:#999;text-align:center;line-height:1.8}
+.win{color:#2e7d32;font-weight:700}
+.lose{color:#c62828;font-weight:700}
+</style>
+</head>
+<body>
+
+<!-- Jupyter 顶栏 -->
+<div class="jp-top">
+  <div class="jp-logo">📊 jupyter <span>data_analysis</span></div>
+  <div class="jp-menu">
+    <span>File</span><span>Edit</span><span>View</span><span>Insert</span><span>Cell</span><span>Kernel</span><span>Help</span>
+  </div>
+</div>
+<div class="jp-toolbar">
+  <span class="jp-btn">💾</span><span class="jp-btn">➕</span><span class="jp-btn">✂️</span>
+  <span class="jp-btn">▶ Run</span><span class="jp-btn">⏹</span><span class="jp-btn">↻</span>
+  <span style="margin-left:10px">Python 3 (ipykernel)</span>
+</div>
+
+<div class="nb">
+  <!-- 代码 cell -->
+  <div class="cell code-cell">
+    <div class="prompt">In [1]:</div>
+    <div class="cell-body"><span class="kw">import</span> pandas <span class="kw">as</span> pd<br>
+<span class="kw">import</span> numpy <span class="kw">as</span> np<br>
+<span class="cm"># 加载数据集并生成相关性矩阵</span><br>
+df = pd.<span class="fn">read_csv</span>(<span class="st">"dataset.csv"</span>)<br>
+matrix = df.<span class="fn">corr</span>().<span class="fn">round</span>(<span class="nu">2</span>)<br>
+<span class="fn">print</span>(matrix)</div>
+  </div>
+
+  <!-- 输出 cell = 扫雷 -->
+  <div class="cell out-cell">
+    <div class="prompt">Out[1]:</div>
+    <div class="cell-body">
+      <div class="out-label" id="outLabel">&lt;correlation matrix: 9×9, 10 features flagged&gt;</div>
+      <div id="grid"></div>
+      <div class="statline" id="statline">shape: (9, 9)  |  flagged: 0 / 10</div>
+    </div>
+  </div>
+</div>
+
+<div class="hintbar">
+  左键点格子 = 揭开 &nbsp;·&nbsp; 右键点格子 = 标记地雷(旗) &nbsp;·&nbsp; 揭开所有非雷格子即胜利<br>
+  数字表示周围 8 格里的地雷数量 &nbsp;·&nbsp; 看起来只是一张相关性矩阵 📊
+</div>
+
+<script>
+(function(){
+'use strict';
+
+var ROWS = 9, COLS = 9, MINES = 10;
+var grid = [];          // {mine, revealed, flagged, count}
+var started = false;
+var over = false;
+var revealedCount = 0;
+var flagCount = 0;
+
+var gridEl = document.getElementById('grid');
+var statEl = document.getElementById('statline');
+var labelEl = document.getElementById('outLabel');
+
+function reset() {
+  grid = [];
+  started = false;
+  over = false;
+  revealedCount = 0;
+  flagCount = 0;
+  for (var r = 0; r < ROWS; r++) {
+    grid[r] = [];
+    for (var c = 0; c < COLS; c++) {
+      grid[r][c] = {mine:false, revealed:false, flagged:false, count:0};
+    }
+  }
+  labelEl.innerHTML = '&lt;correlation matrix: 9×9, 10 features flagged&gt;';
+  render();
+}
+
+// 首次点击后布雷(保证第一下不踩雷)
+function placeMines(safeR, safeC) {
+  var placed = 0;
+  while (placed < MINES) {
+    var r = Math.floor(Math.random()*ROWS);
+    var c = Math.floor(Math.random()*COLS);
+    if (grid[r][c].mine) continue;
+    if (Math.abs(r-safeR) <= 1 && Math.abs(c-safeC) <= 1) continue; // 首点周围留白
+    grid[r][c].mine = true;
+    placed++;
+  }
+  // 算数字
+  for (var r = 0; r < ROWS; r++) {
+    for (var c = 0; c < COLS; c++) {
+      if (grid[r][c].mine) continue;
+      var n = 0;
+      for (var dr = -1; dr <= 1; dr++)
+        for (var dc = -1; dc <= 1; dc++) {
+          var nr = r+dr, nc = c+dc;
+          if (nr>=0&&nr<ROWS&&nc>=0&&nc<COLS&&grid[nr][nc].mine) n++;
+        }
+      grid[r][c].count = n;
+    }
+  }
+}
+
+function reveal(r, c) {
+  if (over) return;
+  var cell = grid[r][c];
+  if (cell.revealed || cell.flagged) return;
+
+  if (!started) { placeMines(r, c); started = true; }
+
+  cell.revealed = true;
+  revealedCount++;
+
+  if (cell.mine) {
+    over = true;
+    // 显示所有雷
+    for (var rr=0; rr<ROWS; rr++) for (var cc=0; cc<COLS; cc++) if (grid[rr][cc].mine) grid[rr][cc].revealed = true;
+    labelEl.innerHTML = '<span class="lose">ValueError: NaN detected in matrix (踩雷了 💥)</span>';
+    render();
+    return;
+  }
+
+  // 空格扩散
+  if (cell.count === 0) {
+    for (var dr=-1; dr<=1; dr++)
+      for (var dc=-1; dc<=1; dc++) {
+        var nr=r+dr, nc=c+dc;
+        if (nr>=0&&nr<ROWS&&nc>=0&&nc<COLS && !grid[nr][nc].revealed) reveal(nr, nc);
+      }
+  }
+
+  checkWin();
+  render();
+}
+
+function toggleFlag(r, c) {
+  if (over) return;
+  var cell = grid[r][c];
+  if (cell.revealed) return;
+  cell.flagged = !cell.flagged;
+  flagCount += cell.flagged ? 1 : -1;
+  render();
+}
+
+function checkWin() {
+  if (revealedCount === ROWS*COLS - MINES) {
+    over = true;
+    for (var r=0;r<ROWS;r++) for (var c=0;c<COLS;c++) if (grid[r][c].mine) { grid[r][c].flagged = true; }
+    labelEl.innerHTML = '<span class="win">✓ 分析完成:所有异常值已定位 (通关 🎉)</span>';
+  }
+}
+
+function render() {
+  var html = '<table class="df"><tr><th></th>';
+  for (var c = 0; c < COLS; c++) html += '<th>c'+c+'</th>';
+  html += '</tr>';
+
+  for (var r = 0; r < ROWS; r++) {
+    html += '<tr><td class="idx">r'+r+'</td>';
+    for (var c = 0; c < COLS; c++) {
+      var cell = grid[r][c];
+      var cls = 'hidden-cell', txt = '';
+      if (cell.revealed) {
+        if (cell.mine) { cls = 'mine'; txt = '✱'; }
+        else {
+          cls = 'revealed';
+          if (cell.count > 0) { txt = cell.count; cls += ' n'+cell.count; }
+          else txt = '';
+        }
+      } else if (cell.flagged) {
+        cls = 'flag'; txt = '⚑';
+      } else {
+        // 未揭开：显示一个假的小数,像相关性数据(揭开前看着就是数据表)
+        txt = '';
+      }
+      html += '<td class="'+cls+'" data-r="'+r+'" data-c="'+c+'">'+txt+'</td>';
+    }
+    html += '</tr>';
+  }
+  html += '</table>';
+  gridEl.innerHTML = html;
+  statEl.textContent = 'shape: (9, 9)  |  flagged: ' + flagCount + ' / ' + MINES + (over ? '  |  double-click 任意格重跑' : '');
+}
+
+// 事件委托
+gridEl.addEventListener('click', function(e) {
+  var td = e.target.closest('td[data-r]');
+  if (!td) return;
+  reveal(+td.dataset.r, +td.dataset.c);
+});
+gridEl.addEventListener('contextmenu', function(e) {
+  e.preventDefault();
+  var td = e.target.closest('td[data-r]');
+  if (!td) return;
+  toggleFlag(+td.dataset.r, +td.dataset.c);
+});
+gridEl.addEventListener('dblclick', function(e) {
+  if (over) reset();
+});
+
+reset();
+})();
+</script>
+</body>
+</html>
