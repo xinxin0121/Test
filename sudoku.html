@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>data_matrix_9x9.xlsx - Excel</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#f3f2f1;color:#000;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:14px;height:100vh;overflow:hidden;user-select:none}
+
+.xl-title{background:#217346;color:#fff;height:30px;display:flex;align-items:center;padding:0 12px;font-size:13px;gap:8px}
+.xl-ribbon{background:#f3f2f1;border-bottom:1px solid #d4d4d4;height:28px;display:flex;align-items:center;padding:0 12px;gap:20px;font-size:13px;color:#444}
+.xl-ribbon .active{color:#217346;font-weight:600;border-bottom:2px solid #217346;padding-bottom:4px}
+.xl-formula{background:#fff;border-bottom:1px solid #d4d4d4;height:26px;display:flex;align-items:center;font-size:13px}
+.xl-namebox{width:80px;border-right:1px solid #d4d4d4;padding:0 8px;height:100%;display:flex;align-items:center;color:#444}
+.xl-fx{padding:0 10px;color:#888;font-style:italic}
+
+.xl-main{display:flex;height:calc(100vh - 30px - 28px - 26px - 46px);align-items:flex-start}
+.grid-wrap{padding:14px;overflow:auto}
+
+table.sheet{border-collapse:collapse;font-size:13px}
+table.sheet th{background:#f3f2f1;border:1px solid #d4d4d4;color:#666;font-weight:400;text-align:center;height:20px;width:38px}
+table.sheet th.corner{width:28px}
+table.sheet td.rownum{background:#f3f2f1;border:1px solid #d4d4d4;color:#666;text-align:center;width:28px}
+table.sheet td.cell{border:1px solid #d0d0d0;width:38px;height:38px;text-align:center;vertical-align:middle;background:#fff;font-size:18px;cursor:pointer}
+/* 3x3 宫的粗线 */
+table.sheet td.cell.br{border-right:2px solid #217346}
+table.sheet td.cell.bb{border-bottom:2px solid #217346}
+table.sheet td.given{color:#000;font-weight:700;background:#eef6f0;cursor:default}
+table.sheet td.user{color:#1565c0;font-weight:600}
+table.sheet td.sel{background:#cfe8d6 !important;outline:2px solid #217346;outline-offset:-2px}
+table.sheet td.same{background:#e3f1e8}
+table.sheet td.err{color:#c62828 !important;background:#ffdede}
+
+/* 数字键盘 */
+.pad{margin:14px 0 0 8px;display:flex;flex-direction:column;gap:10px}
+.pad .row{display:flex;gap:6px}
+.pad button{width:44px;height:44px;font-size:18px;border:1px solid #ccc;background:#fff;border-radius:4px;cursor:pointer;color:#217346;font-weight:600}
+.pad button:hover{background:#eef6f0}
+.pad .ctrl{font-size:12px;color:#666}
+.pad .newbtn{width:100%;height:34px;font-size:13px;background:#217346;color:#fff;border:none;border-radius:4px;cursor:pointer}
+.pad .diff{display:flex;gap:4px}
+.pad .diff button{width:auto;flex:1;height:28px;font-size:11px;color:#444}
+.pad .diff button.on{background:#217346;color:#fff;border-color:#217346}
+
+.xl-tabs{background:#f3f2f1;border-top:1px solid #d4d4d4;height:24px;display:flex;align-items:center;padding:0 8px;gap:2px;font-size:12px}
+.xl-tab{padding:2px 12px;color:#444}
+.xl-tab.active{background:#fff;border:1px solid #d4d4d4;border-bottom:none;color:#217346;font-weight:600}
+.xl-status{background:#217346;color:#fff;height:22px;display:flex;align-items:center;padding:0 12px;font-size:12px;justify-content:space-between}
+
+.game-msg{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:50;background:#fff;border-top:4px solid #217346;padding:22px 34px;box-shadow:0 8px 30px rgba(0,0,0,.25);text-align:center;display:none;border-radius:2px}
+.game-msg.show{display:block}
+.game-msg .t{font-size:16px;color:#217346;font-weight:700;margin-bottom:8px}
+.game-msg button{margin-top:12px;background:#217346;color:#fff;border:none;padding:6px 18px;border-radius:3px;cursor:pointer}
+</style>
+</head>
+<body>
+
+<div class="xl-title"><span>📊</span><span>data_matrix_9x9.xlsx - Excel</span></div>
+<div class="xl-ribbon">
+  <span>文件</span><span class="active">开始</span><span>插入</span><span>页面布局</span>
+  <span>公式</span><span>数据</span><span>审阅</span><span>视图</span>
+</div>
+<div class="xl-formula">
+  <div class="xl-namebox" id="nameBox">A1</div>
+  <div class="xl-fx">fx</div>
+  <div style="padding:0 10px;color:#333">=DATA_VALIDATION(1:9, unique)</div>
+</div>
+
+<div class="xl-main">
+  <div class="grid-wrap"><table class="sheet" id="sheet"></table></div>
+  <div class="pad">
+    <div class="row"><button data-n="1">1</button><button data-n="2">2</button><button data-n="3">3</button></div>
+    <div class="row"><button data-n="4">4</button><button data-n="5">5</button><button data-n="6">6</button></div>
+    <div class="row"><button data-n="7">7</button><button data-n="8">8</button><button data-n="9">9</button></div>
+    <div class="row"><button data-n="0" style="width:100%">清除格 (0/Del)</button></div>
+    <div class="diff">
+      <button data-d="easy" class="on">简单</button>
+      <button data-d="medium">中等</button>
+      <button data-d="hard">困难</button>
+    </div>
+    <button class="newbtn" id="newBtn">↻ 新建表格</button>
+    <div class="ctrl">点格子选中 · 键盘 1-9 填数 · 方向键移动</div>
+  </div>
+</div>
+
+<div class="xl-tabs">
+  <span class="xl-tab active">Sheet1</span><span class="xl-tab">校验</span><span style="color:#888;margin-left:6px">＋</span>
+</div>
+<div class="xl-status">
+  <div><span id="statusText">就绪</span></div>
+  <div><span id="fillLabel">已填 0/81</span></div>
+</div>
+
+<div class="game-msg" id="gameMsg">
+  <div class="t" id="msgTitle">✓ 校验通过</div>
+  <div id="msgBody">所有约束满足，矩阵完整。</div>
+  <button id="okBtn">再来一张</button>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+var COLS = ['A','B','C','D','E','F','G','H','I'];
+var solution = [];   // 完整解
+var puzzle = [];     // 题面（0=空）
+var user = [];       // 玩家填的
+var sel = null;      // {r,c}
+var difficulty = 'easy';
+var holes = {easy:38, medium:48, hard:54};
+
+var sheetEl = document.getElementById('sheet');
+var nameBox = document.getElementById('nameBox');
+var fillLabel = document.getElementById('fillLabel');
+var statusText = document.getElementById('statusText');
+var msg = document.getElementById('gameMsg');
+
+// —— 生成一个完整合法的数独解 ——
+function genSolution() {
+  var g = [];
+  for (var i = 0; i < 9; i++) { g[i] = []; for (var j = 0; j < 9; j++) g[i][j] = 0; }
+  fill(g);
+  return g;
+}
+function fill(g) {
+  for (var i = 0; i < 81; i++) {
+    var r = Math.floor(i/9), c = i%9;
+    if (g[r][c] === 0) {
+      var nums = shuffle([1,2,3,4,5,6,7,8,9]);
+      for (var k = 0; k < 9; k++) {
+        if (valid(g, r, c, nums[k])) {
+          g[r][c] = nums[k];
+          if (fill(g)) return true;
+          g[r][c] = 0;
+        }
+      }
+      return false;
+    }
+  }
+  return true;
+}
+function valid(g, r, c, n) {
+  for (var i = 0; i < 9; i++) if (g[r][i] === n || g[i][c] === n) return false;
+  var br = Math.floor(r/3)*3, bc = Math.floor(c/3)*3;
+  for (var i = 0; i < 3; i++) for (var j = 0; j < 3; j++) if (g[br+i][bc+j] === n) return false;
+  return true;
+}
+function shuffle(a) {
+  for (var i = a.length-1; i > 0; i--) { var j = Math.floor(Math.random()*(i+1)); var t = a[i]; a[i]=a[j]; a[j]=t; }
+  return a;
+}
+
+function newGame() {
+  solution = genSolution();
+  puzzle = [];
+  user = [];
+  for (var r = 0; r < 9; r++) { puzzle[r] = solution[r].slice(); user[r] = []; for (var c=0;c<9;c++) user[r][c]=0; }
+  // 挖洞
+  var cells = [];
+  for (var i = 0; i < 81; i++) cells.push(i);
+  shuffle(cells);
+  var toRemove = holes[difficulty];
+  for (var i = 0; i < toRemove; i++) {
+    var r = Math.floor(cells[i]/9), c = cells[i]%9;
+    puzzle[r][c] = 0;
+  }
+  sel = null;
+  render();
+  msg.classList.remove('show');
+  statusText.textContent = '就绪';
+}
+
+function currentVal(r, c) {
+  return puzzle[r][c] !== 0 ? puzzle[r][c] : user[r][c];
+}
+
+function render() {
+  var html = '<tr><th class="corner"></th>';
+  for (var c = 0; c < 9; c++) html += '<th>'+COLS[c]+'</th>';
+  html += '</tr>';
+
+  var selVal = sel ? currentVal(sel.r, sel.c) : 0;
+
+  for (var r = 0; r < 9; r++) {
+    html += '<tr><td class="rownum">'+(r+1)+'</td>';
+    for (var c = 0; c < 9; c++) {
+      var given = puzzle[r][c] !== 0;
+      var v = currentVal(r, c);
+      var cls = 'cell';
+      if ((c+1) % 3 === 0 && c !== 8) cls += ' br';
+      if ((r+1) % 3 === 0 && r !== 8) cls += ' bb';
+      if (given) cls += ' given';
+      else if (v !== 0) cls += ' user';
+      if (sel && sel.r === r && sel.c === c) cls += ' sel';
+      else if (v !== 0 && selVal !== 0 && v === selVal) cls += ' same';
+      // 冲突高亮
+      if (!given && v !== 0 && !isPlacementOk(r, c, v)) cls += ' err';
+      html += '<td class="'+cls+'" data-r="'+r+'" data-c="'+c+'">'+(v === 0 ? '' : v)+'</td>';
+    }
+    html += '</tr>';
+  }
+  sheetEl.innerHTML = html;
+
+  var filled = 0;
+  for (var r = 0; r < 9; r++) for (var c = 0; c < 9; c++) if (currentVal(r,c) !== 0) filled++;
+  fillLabel.textContent = '已填 '+filled+'/81';
+  nameBox.textContent = sel ? COLS[sel.c]+(sel.r+1) : 'A1';
+}
+
+// 检查 (r,c) 填 v 是否和同行/列/宫冲突（不算自己）
+function isPlacementOk(r, c, v) {
+  for (var i = 0; i < 9; i++) {
+    if (i !== c && currentVal(r, i) === v) return false;
+    if (i !== r && currentVal(i, c) === v) return false;
+  }
+  var br = Math.floor(r/3)*3, bc = Math.floor(c/3)*3;
+  for (var i = 0; i < 3; i++) for (var j = 0; j < 3; j++) {
+    var rr = br+i, cc = bc+j;
+    if ((rr !== r || cc !== c) && currentVal(rr, cc) === v) return false;
+  }
+  return true;
+}
+
+function setVal(n) {
+  if (!sel) return;
+  var r = sel.r, c = sel.c;
+  if (puzzle[r][c] !== 0) return; // 题面固定格不可改
+  user[r][c] = n;
+  render();
+  checkComplete();
+}
+
+function checkComplete() {
+  for (var r = 0; r < 9; r++) for (var c = 0; c < 9; c++) {
+    if (currentVal(r,c) === 0) return;
+    if (currentVal(r,c) !== solution[r][c]) return;
+  }
+  statusText.textContent = '✓ 校验通过';
+  document.getElementById('msgTitle').textContent = '✓ 校验通过';
+  document.getElementById('msgBody').textContent = '所有约束满足，矩阵完整。';
+  msg.classList.add('show');
+}
+
+// 点格子
+sheetEl.addEventListener('click', function(e) {
+  var td = e.target.closest('td[data-r]');
+  if (!td) return;
+  sel = {r:+td.dataset.r, c:+td.dataset.c};
+  render();
+});
+
+// 数字键盘
+document.querySelectorAll('.pad button[data-n]').forEach(function(b){
+  b.addEventListener('click', function(){ setVal(+b.dataset.n); });
+});
+
+// 难度
+document.querySelectorAll('.pad .diff button').forEach(function(b){
+  b.addEventListener('click', function(){
+    document.querySelectorAll('.pad .diff button').forEach(function(x){x.classList.remove('on');});
+    b.classList.add('on');
+    difficulty = b.dataset.d;
+    newGame();
+  });
+});
+
+document.getElementById('newBtn').addEventListener('click', newGame);
+document.getElementById('okBtn').addEventListener('click', newGame);
+
+// 键盘
+document.addEventListener('keydown', function(e){
+  if (e.key >= '1' && e.key <= '9') { setVal(+e.key); e.preventDefault(); return; }
+  if (e.key === '0' || e.key === 'Delete' || e.key === 'Backspace') { setVal(0); e.preventDefault(); return; }
+  if (!sel) return;
+  if (e.key === 'ArrowUp' && sel.r > 0) { sel.r--; render(); e.preventDefault(); }
+  if (e.key === 'ArrowDown' && sel.r < 8) { sel.r++; render(); e.preventDefault(); }
+  if (e.key === 'ArrowLeft' && sel.c > 0) { sel.c--; render(); e.preventDefault(); }
+  if (e.key === 'ArrowRight' && sel.c < 8) { sel.c++; render(); e.preventDefault(); }
+});
+
+newGame();
+})();
+</script>
+</body>
+</html>
