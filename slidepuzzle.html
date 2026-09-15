@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>seq_index_table.xlsx - Excel</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#f3f2f1;color:#000;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:14px;height:100vh;overflow:hidden;user-select:none}
+
+.xl-title{background:#217346;color:#fff;height:30px;display:flex;align-items:center;padding:0 12px;font-size:13px;gap:8px}
+.xl-ribbon{background:#f3f2f1;border-bottom:1px solid #d4d4d4;height:28px;display:flex;align-items:center;padding:0 12px;gap:20px;font-size:13px;color:#444}
+.xl-ribbon .active{color:#217346;font-weight:600;border-bottom:2px solid #217346;padding-bottom:4px}
+.xl-formula{background:#fff;border-bottom:1px solid #d4d4d4;height:26px;display:flex;align-items:center;font-size:13px}
+.xl-namebox{width:80px;border-right:1px solid #d4d4d4;padding:0 8px;height:100%;display:flex;align-items:center;color:#444}
+.xl-fx{padding:0 10px;color:#888;font-style:italic}
+
+.xl-main{display:flex;height:calc(100vh - 30px - 28px - 26px - 46px);align-items:flex-start}
+.grid-wrap{padding:14px;overflow:auto}
+
+table.sheet{border-collapse:collapse;font-size:13px}
+table.sheet th{background:#f3f2f1;border:1px solid #d4d4d4;color:#666;font-weight:400;text-align:center;height:20px;width:56px}
+table.sheet th.corner{width:28px}
+table.sheet td.rownum{background:#f3f2f1;border:1px solid #d4d4d4;color:#666;text-align:center;width:28px}
+table.sheet td.cell{border:1px solid #d0d0d0;width:56px;height:56px;text-align:center;vertical-align:middle;background:#fff;font-size:22px;font-weight:600;color:#217346;cursor:pointer;transition:background .08s}
+table.sheet td.cell:hover{background:#eef6f0}
+table.sheet td.empty{background:#f3f2f1;cursor:default;color:#f3f2f1}
+table.sheet td.done{background:#217346;color:#fff}
+
+.pad{margin:14px 0 0 8px;display:flex;flex-direction:column;gap:12px;width:180px}
+.pad .stat{font-size:13px;color:#444;line-height:1.9}
+.pad .stat b{color:#217346}
+.pad .newbtn{height:36px;font-size:13px;background:#217346;color:#fff;border:none;border-radius:4px;cursor:pointer}
+.pad .size{display:flex;gap:4px}
+.pad .size button{flex:1;height:28px;font-size:12px;border:1px solid #ccc;background:#fff;border-radius:4px;cursor:pointer;color:#444}
+.pad .size button.on{background:#217346;color:#fff;border-color:#217346}
+.pad .tip{font-size:12px;color:#888;line-height:1.7}
+
+.xl-tabs{background:#f3f2f1;border-top:1px solid #d4d4d4;height:24px;display:flex;align-items:center;padding:0 8px;gap:2px;font-size:12px}
+.xl-tab{padding:2px 12px;color:#444}
+.xl-tab.active{background:#fff;border:1px solid #d4d4d4;border-bottom:none;color:#217346;font-weight:600}
+.xl-status{background:#217346;color:#fff;height:22px;display:flex;align-items:center;padding:0 12px;font-size:12px;justify-content:space-between}
+
+.game-msg{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:50;background:#fff;border-top:4px solid #217346;padding:22px 34px;box-shadow:0 8px 30px rgba(0,0,0,.25);text-align:center;display:none;border-radius:2px}
+.game-msg.show{display:block}
+.game-msg .t{font-size:16px;color:#217346;font-weight:700;margin-bottom:8px}
+.game-msg button{margin-top:12px;background:#217346;color:#fff;border:none;padding:6px 18px;border-radius:3px;cursor:pointer}
+</style>
+</head>
+<body>
+
+<div class="xl-title"><span>📊</span><span>seq_index_table.xlsx - Excel</span></div>
+<div class="xl-ribbon">
+  <span>文件</span><span class="active">开始</span><span>插入</span><span>页面布局</span>
+  <span>公式</span><span>数据</span><span>审阅</span><span>视图</span>
+</div>
+<div class="xl-formula">
+  <div class="xl-namebox" id="nameBox">A1</div>
+  <div class="xl-fx">fx</div>
+  <div style="padding:0 10px;color:#333">=SORT(index_col, ascending)</div>
+</div>
+
+<div class="xl-main">
+  <div class="grid-wrap"><table class="sheet" id="sheet"></table></div>
+  <div class="pad">
+    <div class="stat">
+      步数：<b id="moves">0</b><br>
+      用时：<b id="timer">00:00</b>
+    </div>
+    <div class="size">
+      <button data-n="3">3×3</button>
+      <button data-n="4" class="on">4×4</button>
+      <button data-n="5">5×5</button>
+    </div>
+    <button class="newbtn" id="newBtn">↻ 重新排序（打乱）</button>
+    <div class="tip">点空格旁边的数字块 = 滑进空位<br>把数字按 1,2,3… 顺序排好即完成<br>也支持方向键</div>
+  </div>
+</div>
+
+<div class="xl-tabs">
+  <span class="xl-tab active">Sheet1</span><span class="xl-tab">排序结果</span><span style="color:#888;margin-left:6px">＋</span>
+</div>
+<div class="xl-status">
+  <div><span id="statusText">就绪</span></div>
+  <div><span id="fillLabel">升序排列中…</span></div>
+</div>
+
+<div class="game-msg" id="gameMsg">
+  <div class="t">✓ 排序完成</div>
+  <div id="msgBody">序列已按升序排列。</div>
+  <button id="okBtn">再打乱一次</button>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+var COLS = ['A','B','C','D','E'];
+var N = 4;                 // 边长
+var tiles = [];            // 长度 N*N，值 1..N*N-1，0=空
+var moves = 0;
+var startTime = null;
+var timerId = null;
+var solved = false;
+
+var sheetEl = document.getElementById('sheet');
+var movesEl = document.getElementById('moves');
+var timerEl = document.getElementById('timer');
+var nameBox = document.getElementById('nameBox');
+var statusText = document.getElementById('statusText');
+var msg = document.getElementById('gameMsg');
+
+function idx(r, c) { return r * N + c; }
+function emptyPos() { return tiles.indexOf(0); }
+
+// 生成已解状态后随机走大量合法步（保证一定可解）
+function shuffleBoard() {
+  tiles = [];
+  for (var i = 1; i < N*N; i++) tiles.push(i);
+  tiles.push(0);
+  var steps = N*N*N*20;
+  var last = -1;
+  for (var s = 0; s < steps; s++) {
+    var e = emptyPos();
+    var er = Math.floor(e/N), ec = e % N;
+    var nbrs = [];
+    if (er > 0)   nbrs.push(idx(er-1, ec));
+    if (er < N-1) nbrs.push(idx(er+1, ec));
+    if (ec > 0)   nbrs.push(idx(er, ec-1));
+    if (ec < N-1) nbrs.push(idx(er, ec+1));
+    // 避免立刻走回上一步
+    nbrs = nbrs.filter(function(x){ return x !== last; });
+    var pick = nbrs[Math.floor(Math.random()*nbrs.length)];
+    tiles[e] = tiles[pick];
+    tiles[pick] = 0;
+    last = e;
+  }
+  if (isSolved()) shuffleBoard(); // 极小概率打乱回原样，重来
+}
+
+function isSolved() {
+  for (var i = 0; i < N*N-1; i++) if (tiles[i] !== i+1) return false;
+  return true;
+}
+
+function tryMove(pos) {
+  if (solved) return;
+  var e = emptyPos();
+  var er = Math.floor(e/N), ec = e%N;
+  var pr = Math.floor(pos/N), pc = pos%N;
+  // 相邻才能移动
+  if (Math.abs(er-pr) + Math.abs(ec-pc) !== 1) return;
+  tiles[e] = tiles[pos];
+  tiles[pos] = 0;
+  moves++;
+  movesEl.textContent = moves;
+  if (startTime === null) startTimer();
+  render();
+  if (isSolved()) win();
+}
+
+function win() {
+  solved = true;
+  stopTimer();
+  statusText.textContent = '✓ 排序完成';
+  document.getElementById('msgBody').textContent =
+    '序列已按升序排列，共 ' + moves + ' 步，用时 ' + timerEl.textContent + '。';
+  msg.classList.add('show');
+}
+
+function render() {
+  var html = '<tr><th class="corner"></th>';
+  for (var c = 0; c < N; c++) html += '<th>'+COLS[c]+'</th>';
+  html += '</tr>';
+  for (var r = 0; r < N; r++) {
+    html += '<tr><td class="rownum">'+(r+1)+'</td>';
+    for (var c = 0; c < N; c++) {
+      var v = tiles[idx(r,c)];
+      if (v === 0) {
+        html += '<td class="cell empty"></td>';
+      } else {
+        var cls = 'cell';
+        if (solved) cls += ' done';
+        html += '<td class="'+cls+'" data-pos="'+idx(r,c)+'">'+v+'</td>';
+      }
+    }
+    html += '</tr>';
+  }
+  sheetEl.innerHTML = html;
+}
+
+function startTimer() {
+  startTime = Date.now();
+  timerId = setInterval(function(){
+    var s = Math.floor((Date.now()-startTime)/1000);
+    var m = String(Math.floor(s/60)).padStart(2,'0');
+    var ss = String(s%60).padStart(2,'0');
+    timerEl.textContent = m+':'+ss;
+  }, 500);
+}
+function stopTimer() { if (timerId) clearInterval(timerId); timerId = null; }
+
+function newGame() {
+  stopTimer();
+  startTime = null;
+  moves = 0;
+  solved = false;
+  movesEl.textContent = '0';
+  timerEl.textContent = '00:00';
+  statusText.textContent = '就绪';
+  shuffleBoard();
+  render();
+  msg.classList.remove('show');
+}
+
+sheetEl.addEventListener('click', function(e) {
+  var td = e.target.closest('td[data-pos]');
+  if (!td) return;
+  tryMove(+td.dataset.pos);
+});
+
+// 方向键：把空格“想象成”光标，方向键表示“哪个方向的块滑进空格”
+document.addEventListener('keydown', function(e) {
+  if (solved) return;
+  var e0 = emptyPos();
+  var er = Math.floor(e0/N), ec = e0%N;
+  var target = -1;
+  if (e.key === 'ArrowUp' && er < N-1)    target = idx(er+1, ec); // 下方块上移
+  if (e.key === 'ArrowDown' && er > 0)    target = idx(er-1, ec); // 上方块下移
+  if (e.key === 'ArrowLeft' && ec < N-1)  target = idx(er, ec+1); // 右侧块左移
+  if (e.key === 'ArrowRight' && ec > 0)   target = idx(er, ec-1); // 左侧块右移
+  if (target >= 0) { e.preventDefault(); tryMove(target); }
+});
+
+document.querySelectorAll('.pad .size button').forEach(function(b){
+  b.addEventListener('click', function(){
+    document.querySelectorAll('.pad .size button').forEach(function(x){x.classList.remove('on');});
+    b.classList.add('on');
+    N = +b.dataset.n;
+    newGame();
+  });
+});
+
+document.getElementById('newBtn').addEventListener('click', newGame);
+document.getElementById('okBtn').addEventListener('click', newGame);
+
+newGame();
+})();
+</script>
+</body>
+</html>
