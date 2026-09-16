@@ -45,6 +45,9 @@ body{background:#f4f5f7;color:#172b4d;font-family:-apple-system,'Segoe UI',Robot
 .card .assignee{width:22px;height:22px;border-radius:50%;background:#6554c0;color:#fff;font-size:10px;display:flex;align-items:center;justify-content:center}
 .card .flow{font-size:11px;color:#42526e;margin-top:7px;line-height:1.5}
 .card .flow .in{color:#bf2600}.card .flow .out{color:#006644}
+.card .buff{font-size:11px;margin-top:6px;padding:2px 6px;border-radius:3px}
+.card .buff.hit{background:#e3fcef;color:#006644;font-weight:600}
+.card .buff.miss{background:#f4f5f7;color:#97a0af}
 .card .progress{height:4px;background:#dfe1e6;border-radius:2px;margin-top:7px;overflow:hidden}
 .card .progress .bar{height:100%;background:#0052cc;width:0%;transition:width .3s}
 .card.blocked .progress .bar{background:#ff8b00}
@@ -141,27 +144,57 @@ var RES = {
 // input: 每周期消耗；output: 每周期产出；cycle 秒
 // 原料层 input 为空(直接产)；加工层有 input，缺料则停工
 var BUILDINGS = {
-  farm:  {name:'米铺', ico:'🌾', desc:'派人耕作，直接产出米粮', cost:{wood:15},
+  farm:  {name:'米铺', ico:'🌾', cat:'raw', desc:'派人耕作，直接产出米粮', cost:{wood:15},
           input:{}, output:{food:8}, cycle:10, tag:'原料'},
-  mill:  {name:'桑园', ico:'🧶', desc:'养蚕缫丝，直接产出蚕丝', cost:{wood:20,food:15},
+  mill:  {name:'桑园', ico:'🧶', cat:'raw', desc:'养蚕缫丝，直接产出蚕丝', cost:{wood:20,food:15},
           input:{}, output:{silk:6}, cycle:12, tag:'原料'},
-  wood:  {name:'木场', ico:'🪵', desc:'伐木备料，直接产出木材', cost:{coin:30,food:20},
+  wood:  {name:'木场', ico:'🪵', cat:'raw', desc:'伐木备料，直接产出木材', cost:{coin:30,food:20},
           input:{}, output:{wood:10}, cycle:12, tag:'原料'},
-  loom:  {name:'织坊', ico:'🧵', desc:'蚕丝织成布匹', cost:{coin:40,wood:20},
+  loom:  {name:'织坊', ico:'🧵', cat:'craft', desc:'蚕丝织成布匹', cost:{coin:40,wood:20},
           input:{silk:6}, output:{cloth:4}, cycle:12, tag:'加工'},
-  tea:   {name:'茶馆', ico:'🍵', desc:'米粮制成茶点待客', cost:{coin:50,wood:25},
+  tea:   {name:'茶馆', ico:'🍵', cat:'craft', desc:'米粮制成茶点待客', cost:{coin:50,wood:25},
           input:{food:10}, output:{snack:4}, cycle:12, tag:'加工'},
-  kiln:  {name:'窑厂', ico:'🏺', desc:'木材烧窑产出瓷器', cost:{coin:80,wood:40},
+  kiln:  {name:'窑厂', ico:'🏺', cat:'craft', desc:'木材烧窑产出瓷器', cost:{coin:80,wood:40},
           input:{wood:12}, output:{china:3}, cycle:15, tag:'加工'},
-  market:{name:'集市', ico:'🏮', desc:'布匹/茶点/瓷器 售卖换铜钱', cost:{coin:120,wood:50,food:40},
+  market:{name:'集市', ico:'🏮', cat:'sell', desc:'布匹/茶点/瓷器 售卖换铜钱', cost:{coin:120,wood:50,food:40},
           input:{cloth:2,snack:2}, output:{coin:60}, cycle:14, tag:'变现'},
-  guild: {name:'商号', ico:'🏦', desc:'瓷器高端外销，铜钱大量进账', cost:{coin:300,wood:100,china:10},
+  guild: {name:'商号', ico:'🏦', cat:'sell', desc:'瓷器高端外销，铜钱大量进账', cost:{coin:300,wood:100,china:10},
           input:{china:3}, output:{coin:150}, cycle:16, tag:'变现'},
-  house: {name:'民居', ico:'🏠', desc:'招徕居民，永久增加一名成员', cost:{coin:60,wood:30,food:30},
+  house: {name:'民居', ico:'🏠', cat:'none', desc:'招徕居民，永久增加一名成员', cost:{coin:60,wood:30,food:30},
           input:{}, output:{}, cycle:0, tag:'人口', once:true}
 };
 
-var NAME_POOL = ['文徵明','李时珍','汤显祖','董小宛','沈万三','唐伯虎','徐霞客','柳如是','祝枝山','归有光','海瑞','郑板桥','曹雪芹','蒲松龄'];
+// —— 角色专长 ——
+// bonus 作用于建筑类别 cat：raw/craft/sell；single 指定单个建筑 type，享受更高加成
+// mult 是产出倍率（1.5 = +50%），只加产出、不加原料消耗
+var TALENTS = {
+  '文徵明':{label:'账房先生',cat:'sell',  mult:1.5, tip:'善经营算账'},
+  '沈万三':{label:'江南首富',cat:'sell',  mult:1.8, tip:'富可敌国'},
+  '李时珍':{label:'本草大家',cat:'raw',   mult:1.5, tip:'精于田产药材'},
+  '徐霞客':{label:'游历家',  cat:'raw',   mult:1.5, tip:'踏遍山川识物产'},
+  '唐伯虎':{label:'江南才子',cat:'craft', mult:1.5, tip:'心灵手巧'},
+  '汤显祖':{label:'戏曲名家',cat:'craft', mult:1.5, tip:'匠心独运'},
+  '董小宛':{label:'茶艺名伶',single:'tea',   mult:2.0, tip:'烹茶一绝'},
+  '柳如是':{label:'织造圣手',single:'loom',  mult:2.0, tip:'织锦冠绝江南'},
+  '郑板桥':{label:'瓷画大师',single:'kiln',  mult:2.0, tip:'窑火独到'},
+  '曹雪芹':{label:'织造世家',cat:'craft', mult:1.6, tip:'出身江宁织造'},
+  '祝枝山':{label:'书画商',  cat:'sell',  mult:1.5, tip:'善鬻字画'},
+  '归有光':{label:'田园文人',cat:'raw',   mult:1.4, tip:'耕读传家'},
+  '海瑞':  {label:'清廉能吏',cat:'sell',  mult:1.4, tip:'理财有方'},
+  '蒲松龄':{label:'乡野先生',cat:'raw',   mult:1.4, tip:'熟知乡土'}
+};
+function talentOf(name){ return TALENTS[name] || {label:'普通居民',mult:1.0,tip:'暂无专长'}; }
+// 给定角色 + 建筑，算加成倍率
+function bonusFor(name, def){
+  var t=talentOf(name);
+  if(t.single && t.single===typeKeyOf(def)) return t.mult;
+  if(t.cat && t.cat===def.cat) return t.mult;
+  return 1.0;
+}
+// 反查 def 的 type key
+function typeKeyOf(def){ for(var k in BUILDINGS) if(BUILDINGS[k]===def) return k; return null; }
+
+var NAME_POOL = Object.keys(TALENTS);
 
 var state = null;
 
@@ -189,14 +222,17 @@ function runCycle(b){
   var def=BUILDINGS[b.type];
   if(!def.cycle) return false;
   var mult=lvlMult(b);
-  // 检查原料
+  // 检查原料(消耗只随等级，不随专长)
   for(var k in def.input){
     if(state.res[k] < def.input[k]*mult) return false; // 缺料
   }
+  // 负责人专长加成(只加产出)
+  var bonus=1.0;
+  if(b.assignee!==null && state.workers[b.assignee]) bonus=bonusFor(state.workers[b.assignee].name, def);
   // 扣原料
   for(var k in def.input) state.res[k] -= def.input[k]*mult;
-  // 加产出
-  for(var k in def.output) state.res[k] += def.output[k]*mult;
+  // 加产出(乘等级 × 专长，向下取整避免小数堆积)
+  for(var k in def.output) state.res[k] += Math.floor(def.output[k]*mult*bonus);
   return true;
 }
 
@@ -213,10 +249,11 @@ function settleOffline(){
     var def=BUILDINGS[b.type];
     if(!def.cycle||b.assignee===null) return;
     var cycles=Math.floor(elapsed/def.cycle);
-    // 原料层无消耗，直接乘
+    // 原料层无消耗，直接乘(带专长加成)
     if(Object.keys(def.input).length===0){
       var mult=lvlMult(b);
-      for(var k in def.output) state.res[k]+=def.output[k]*mult*cycles;
+      var bonus=(b.assignee!==null&&state.workers[b.assignee])?bonusFor(state.workers[b.assignee].name,def):1.0;
+      for(var k in def.output) state.res[k]+=Math.floor(def.output[k]*mult*bonus)*cycles;
     }
   });
   // 加工/变现层：受原料限制，逐周期模拟(上限较小，够用)
@@ -293,7 +330,11 @@ function renderBoard(){
   html+='<div class="col"><div class="col-head"><span>团队 · TEAM</span><span>'+state.workers.length+'</span></div><div class="col-body">';
   state.workers.forEach(function(w){
     var free=w.busy===null;
+    var t=talentOf(w.name);
+    var catName={raw:'原料产业',craft:'加工产业',sell:'变现产业'}[t.cat];
+    var expertise = t.single ? ('专精'+BUILDINGS[t.single].name) : (catName?(catName+' +'+Math.round((t.mult-1)*100)+'%'):'无专长');
     html+='<div class="card"><div class="ctitle">👤 '+w.name+'</div>'+
+      '<div class="buff hit" style="margin-top:0;margin-bottom:6px">🎯 '+t.label+'　'+expertise+(t.single?(' +'+Math.round((t.mult-1)*100)+'%'):'')+'</div>'+
       '<div class="cmeta"><span class="tag '+(free?'tag-idle':'tag-task')+'">'+(free?'空闲':'处理中')+'</span>'+
       '<div class="assignee">'+initials(w.name)+'</div></div></div>';
   });
@@ -317,6 +358,12 @@ function cardHtml(b,idx,isRunning){
   h+='<div class="cmeta"><span class="tag '+tagcls+'">'+tagtxt+'</span>';
   h+=assignee?'<div class="assignee" title="'+assignee.name+'">'+initials(assignee.name)+'</div>':'<span style="font-size:11px;color:#5e6c84">未分配</span>';
   h+='</div>';
+  // 负责人专长匹配提示
+  if(assignee){
+    var t=talentOf(assignee.name), bn=bonusFor(assignee.name,def);
+    if(bn>1) h+='<div class="buff hit">✨ '+assignee.name+' · '+t.label+'　产出 +'+Math.round((bn-1)*100)+'%</div>';
+    else h+='<div class="buff miss">'+assignee.name+' · '+t.label+'（专长不符，无加成）</div>';
+  }
   h+='<div class="flow">'+flowStr(def,mult)+' <span style="color:#97a0af">/'+def.cycle+'s</span></div>';
   if(isRunning){
     var elapsed=(Date.now()-(b.lastTick||Date.now()))/1000;
@@ -371,7 +418,8 @@ function build(type){
     var avail=NAME_POOL.filter(function(n){return used.indexOf(n)<0;});
     var nm=avail.length?avail[Math.floor(Math.random()*avail.length)]:('居民'+(state.workers.length+1));
     state.workers.push({name:nm,busy:null});
-    toast('🎉 招募了新成员：'+nm+'（去团队列看看）');
+    var nt=talentOf(nm);
+    toast('🎉 招募了新成员：'+nm+'（'+nt.label+' · '+nt.tip+'）');
   }else{
     state.buildings.push({id:state.nextId++,type:type,assignee:null,lastTick:Date.now(),level:1,blocked:false});
     toast('已立项：'+def.name+'（在"待办"点它派个负责人开工）');
@@ -399,11 +447,16 @@ function openAssign(idx){
   document.getElementById('assignTitle').textContent='为「'+def.name+'」分配负责人';
   var list=document.getElementById('assignList');
   var html='';
-  state.workers.forEach(function(w,wi){
+  // 按对当前建筑的加成从高到低排，方便选最合适的
+  var sorted=state.workers.map(function(w,wi){return {w:w,wi:wi};}).sort(function(a,bb){return bonusFor(bb.w.name,def)-bonusFor(a.w.name,def);});
+  sorted.forEach(function(o){
+    var w=o.w, wi=o.wi;
     var busy=w.busy!==null&&w.busy!==idx;
+    var t=talentOf(w.name), bn=bonusFor(w.name,def);
+    var buffTxt = bn>1 ? '<span style="color:#006644;font-weight:600">✨ '+t.label+' 加成 +'+Math.round((bn-1)*100)+'%</span>' : '<span style="color:#97a0af">'+t.label+'（不对口）</span>';
     html+='<div class="assign-item '+(busy?'busy':'')+'" '+(busy?'':'data-worker="'+wi+'"')+'>';
     html+='<div class="av">'+initials(w.name)+'</div>';
-    html+='<div><div style="font-weight:600">'+w.name+'</div>';
+    html+='<div style="flex:1"><div style="font-weight:600">'+w.name+'　'+buffTxt+'</div>';
     html+='<div style="font-size:12px;color:#5e6c84">'+(busy?'处理中(已分配其他产业)':'空闲，可分配')+'</div></div></div>';
   });
   if(b.assignee!==null){
