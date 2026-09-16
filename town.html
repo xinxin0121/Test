@@ -148,7 +148,7 @@ var BUILDINGS = {
           input:{}, output:{food:8}, cycle:10, tag:'原料'},
   mill:  {name:'桑园', ico:'🧶', cat:'raw', desc:'养蚕缫丝，直接产出蚕丝', cost:{wood:20,food:15},
           input:{}, output:{silk:6}, cycle:12, tag:'原料'},
-  wood:  {name:'木场', ico:'🪵', cat:'raw', desc:'伐木备料，直接产出木材', cost:{coin:30,food:20},
+  wood:  {name:'木场', ico:'🪵', cat:'raw', desc:'伐木备料，直接产出木材（基础产业，仅需米粮即可开办）', cost:{food:10},
           input:{}, output:{wood:10}, cycle:12, tag:'原料'},
   loom:  {name:'织坊', ico:'🧵', cat:'craft', desc:'蚕丝织成布匹', cost:{coin:40,wood:20},
           input:{silk:6}, output:{cloth:4}, cycle:12, tag:'加工'},
@@ -214,6 +214,23 @@ function load(){
   state=defaultState(); return false;
 }
 function save(){ try{state.lastSave=Date.now();localStorage.setItem(SAVE_KEY,JSON.stringify(state));}catch(e){} }
+
+// —— 防死锁兜底 ——
+// 木材是万物之源。如果木材见底、又没有任何在产的木场，
+// 就无法建造/升级任何东西 → 永久卡死。此时白送一批木材救急。
+function antiDeadlock(){
+  var hasWoodSource = state.buildings.some(function(b){
+    return b.type==='wood' && b.assignee!==null;
+  });
+  // 造木场只要米粮：确保至少有能开一座木场的米粮
+  var minFoodForWood = (BUILDINGS.wood.cost.food||0);
+  if(state.res.wood < 10 && !hasWoodSource){
+    if(state.res.food < minFoodForWood) state.res.food = minFoodForWood; // 连开木场的米粮都没有，也补上
+    state.res.wood += 20; // 白送 20 木材，够开一座木场再造点东西
+    return true;
+  }
+  return false;
+}
 
 function lvlMult(b){ return b.level||1; } // 等级倍率：产出/消耗都 ×等级
 
@@ -507,6 +524,7 @@ document.getElementById('assignModal').addEventListener('click',function(e){
 // —— 启动 ——
 load();
 var offlineGain=settleOffline();
+var rescued=antiDeadlock();
 if(offlineGain){
   var parts=[]; for(var k in offlineGain) parts.push(RES[k].ico+offlineGain[k]);
   if(parts.length){
@@ -516,6 +534,10 @@ if(offlineGain){
   }
 }
 save(); updateResources(); renderBoard();
+if(rescued){ toast('🪵 木材见底且无木场在产，已紧急拨付一批木材救急，先去建/开一座木场吧'); }
+
+// 每次生产 tick 后也检查一次，运营中途卡死同样兜底
+setInterval(function(){ if(antiDeadlock()){ updateResources(); renderBoard(); } }, 8000);
 
 setInterval(productionTick,1000);
 setInterval(save,5000);
