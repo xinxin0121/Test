@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>chart_render.xlsx - Excel</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#f3f2f1;color:#000;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:14px;height:100vh;overflow:hidden;user-select:none}
+.xl-title{background:#217346;color:#fff;height:30px;display:flex;align-items:center;padding:0 12px;font-size:13px;gap:8px}
+.xl-ribbon{background:#f3f2f1;border-bottom:1px solid #d4d4d4;height:28px;display:flex;align-items:center;padding:0 12px;gap:20px;font-size:13px;color:#444}
+.xl-ribbon .active{color:#217346;font-weight:600;border-bottom:2px solid #217346;padding-bottom:4px}
+.xl-formula{background:#fff;border-bottom:1px solid #d4d4d4;height:26px;display:flex;align-items:center;font-size:13px}
+.xl-namebox{width:80px;border-right:1px solid #d4d4d4;padding:0 8px;height:100%;display:flex;align-items:center;color:#444}
+.xl-fx{padding:0 10px;color:#888;font-style:italic}
+.xl-main{display:flex;height:calc(100vh - 30px - 28px - 26px - 46px);align-items:flex-start;padding:14px;gap:20px}
+.grid-wrap{background:#fff;border:1px solid #d4d4d4}
+canvas{display:block;cursor:none}
+.pad{display:flex;flex-direction:column;gap:14px;width:180px}
+.pad .stat{font-size:13px;color:#444;line-height:2}
+.pad .stat b{color:#217346;font-size:16px}
+.pad .newbtn{height:36px;font-size:13px;background:#217346;color:#fff;border:none;border-radius:4px;cursor:pointer}
+.pad .tip{font-size:12px;color:#888;line-height:1.8}
+.xl-tabs{background:#f3f2f1;border-top:1px solid #d4d4d4;height:24px;display:flex;align-items:center;padding:0 8px;gap:2px;font-size:12px}
+.xl-tab{padding:2px 12px;color:#444}
+.xl-tab.active{background:#fff;border:1px solid #d4d4d4;border-bottom:none;color:#217346;font-weight:600}
+.xl-status{background:#217346;color:#fff;height:22px;display:flex;align-items:center;padding:0 12px;font-size:12px;justify-content:space-between}
+.game-msg{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:50;background:#fff;border-top:4px solid #217346;padding:22px 34px;box-shadow:0 8px 30px rgba(0,0,0,.25);text-align:center;display:none;border-radius:2px}
+.game-msg.show{display:block}
+.game-msg .t{font-size:16px;color:#217346;font-weight:700;margin-bottom:8px}
+.game-msg button{margin-top:12px;background:#217346;color:#fff;border:none;padding:6px 18px;border-radius:3px;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="xl-title"><span>📊</span><span>chart_render.xlsx - Excel</span></div>
+<div class="xl-ribbon"><span>文件</span><span class="active">开始</span><span>插入</span><span>页面布局</span><span>公式</span><span>数据</span><span>审阅</span><span>视图</span></div>
+<div class="xl-formula"><div class="xl-namebox">A1</div><div class="xl-fx">fx</div><div style="padding:0 10px;color:#333">=RENDER_CHART(bar_series)</div></div>
+
+<div class="xl-main">
+  <div class="grid-wrap"><canvas id="cv" width="420" height="440"></canvas></div>
+  <div class="pad">
+    <div class="stat">得分：<b id="score">0</b><br>命：<b id="lives">3</b><br>关卡：<b id="level">1</b></div>
+    <button class="newbtn" id="newBtn">↻ 重新渲染</button>
+    <div class="tip">鼠标移动 或 ← → 控制挡板<br>把上方所有柱形消掉<br>空格 发球 / 暂停</div>
+  </div>
+</div>
+
+<div class="xl-tabs"><span class="xl-tab active">图表1</span><span class="xl-tab">数据源</span><span style="color:#888;margin-left:6px">＋</span></div>
+<div class="xl-status"><div><span id="statusText">就绪 — 按空格发球</span></div><div><span id="pct">剩余 100%</span></div></div>
+
+<div class="game-msg" id="gameMsg"><div class="t" id="msgTitle"></div><div id="msgBody"></div><button id="okBtn">重新开始</button></div>
+
+<script>
+(function(){
+'use strict';
+var cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+var W=cv.width, H=cv.height;
+var scoreEl=document.getElementById('score'), livesEl=document.getElementById('lives'), levelEl=document.getElementById('level');
+var statusText=document.getElementById('statusText'), pctEl=document.getElementById('pct');
+var msg=document.getElementById('gameMsg');
+
+var COLORS=['#3aa0ff','#217346','#f0b429','#7b61ff','#e5484d','#2fb344'];
+var BRICK_ROWS=6, BRICK_COLS=10, BRICK_H=18, BRICK_GAP=3, BRICK_TOP=40;
+var brickW=(W-BRICK_GAP)/BRICK_COLS - BRICK_GAP;
+
+var paddle, ball, bricks, score, lives, level, running, launched, raf;
+
+function reset(full){
+  if(full){score=0;lives=3;level=1;}
+  paddle={w:80,h:12,x:W/2-40,y:H-24,speed:7};
+  ball={x:W/2,y:H-40,r:6,dx:0,dy:0,speed:4.5+ (level-1)*0.6};
+  launched=false;
+  buildBricks();
+  running=true;
+  updateStat();
+  statusText.textContent='就绪 — 按空格发球';
+  msg.classList.remove('show');
+  draw();
+}
+
+function buildBricks(){
+  bricks=[];
+  for(var r=0;r<BRICK_ROWS;r++)for(var c=0;c<BRICK_COLS;c++){
+    // 高度不一，像柱形图
+    bricks.push({x:BRICK_GAP+c*(brickW+BRICK_GAP), y:BRICK_TOP+r*(BRICK_H+BRICK_GAP), w:brickW, h:BRICK_H, alive:true, color:COLORS[r%COLORS.length]});
+  }
+}
+
+function launch(){
+  if(launched)return;
+  launched=true;
+  var ang=(Math.random()*0.6-0.3);   // 稍微随机的发射角
+  ball.dx=ball.speed*Math.sin(ang);
+  ball.dy=-ball.speed*Math.cos(ang);
+  statusText.textContent='运行中';
+}
+
+function updateStat(){
+  scoreEl.textContent=score; livesEl.textContent=lives; levelEl.textContent=level;
+  var alive=bricks.filter(function(b){return b.alive;}).length;
+  pctEl.textContent='剩余 '+Math.round(alive/bricks.length*100)+'%';
+}
+
+function step(){
+  if(!running){return;}
+  if(!launched){ball.x=paddle.x+paddle.w/2;}
+  else{
+    ball.x+=ball.dx; ball.y+=ball.dy;
+    if(ball.x-ball.r<0){ball.x=ball.r;ball.dx=-ball.dx;}
+    if(ball.x+ball.r>W){ball.x=W-ball.r;ball.dx=-ball.dx;}
+    if(ball.y-ball.r<0){ball.y=ball.r;ball.dy=-ball.dy;}
+    // 掉底
+    if(ball.y-ball.r>H){
+      lives--; updateStat();
+      if(lives<=0){gameOver(false);return;}
+      launched=false; ball.x=paddle.x+paddle.w/2; ball.y=paddle.y-10; ball.dx=0; ball.dy=0;
+      statusText.textContent='掉球！按空格重新发球';
+    }
+    // 挡板碰撞
+    if(ball.dy>0 && ball.y+ball.r>=paddle.y && ball.y+ball.r<=paddle.y+paddle.h+8 &&
+       ball.x>=paddle.x && ball.x<=paddle.x+paddle.w){
+      var hit=(ball.x-(paddle.x+paddle.w/2))/(paddle.w/2); // -1..1
+      var ang=hit*1.05; // 最大约60度
+      ball.dx=ball.speed*Math.sin(ang);
+      ball.dy=-Math.abs(ball.speed*Math.cos(ang));
+    }
+    // 砖块碰撞
+    for(var i=0;i<bricks.length;i++){
+      var b=bricks[i];
+      if(!b.alive)continue;
+      if(ball.x+ball.r>b.x && ball.x-ball.r<b.x+b.w && ball.y+ball.r>b.y && ball.y-ball.r<b.y+b.h){
+        b.alive=false; score+=10*level; ball.dy=-ball.dy; updateStat();
+        if(bricks.every(function(x){return !x.alive;})){nextLevel();return;}
+        break;
+      }
+    }
+  }
+  draw();
+  raf=requestAnimationFrame(step);
+}
+
+function nextLevel(){
+  level++; running=false;
+  statusText.textContent='本关完成！';
+  document.getElementById('msgTitle').textContent='✓ 图表渲染完成';
+  document.getElementById('msgBody').innerHTML='进入第 <b>'+level+'</b> 关，球速提升。';
+  msg.querySelector('button').textContent='下一关';
+  msg.classList.add('show');
+}
+
+function gameOver(){
+  running=false; cancelAnimationFrame(raf);
+  statusText.textContent='渲染失败';
+  document.getElementById('msgTitle').textContent='渲染中断';
+  document.getElementById('msgBody').innerHTML='最终得分 <b>'+score+'</b>，到达第 '+level+' 关。';
+  msg.querySelector('button').textContent='重新开始';
+  msg.classList.add('show');
+}
+
+function draw(){
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+  // 图表底部坐标轴感
+  ctx.strokeStyle='#ddd'; ctx.beginPath(); ctx.moveTo(0,H-30); ctx.lineTo(W,H-30); ctx.stroke();
+  for(var i=0;i<bricks.length;i++){
+    var b=bricks[i]; if(!b.alive)continue;
+    ctx.fillStyle=b.color; ctx.fillRect(b.x,b.y,b.w,b.h);
+    ctx.fillStyle='rgba(255,255,255,.25)'; ctx.fillRect(b.x,b.y,b.w,4);
+  }
+  // 挡板
+  ctx.fillStyle='#217346'; ctx.fillRect(paddle.x,paddle.y,paddle.w,paddle.h);
+  // 球
+  ctx.fillStyle='#e5484d'; ctx.beginPath(); ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2); ctx.fill();
+}
+
+// 鼠标控制
+cv.addEventListener('mousemove',function(e){
+  var rect=cv.getBoundingClientRect();
+  var mx=e.clientX-rect.left;
+  paddle.x=Math.max(0,Math.min(W-paddle.w,mx-paddle.w/2));
+  if(!launched){ball.x=paddle.x+paddle.w/2;draw();}
+});
+
+// 键盘
+var leftHeld=false,rightHeld=false;
+document.addEventListener('keydown',function(e){
+  if(e.key===' '){
+    e.preventDefault();
+    if(!msg.classList.contains('show')){ if(!launched)launch(); }
+    return;
+  }
+  if(e.key==='ArrowLeft')leftHeld=true;
+  if(e.key==='ArrowRight')rightHeld=true;
+});
+document.addEventListener('keyup',function(e){
+  if(e.key==='ArrowLeft')leftHeld=false;
+  if(e.key==='ArrowRight')rightHeld=false;
+});
+setInterval(function(){
+  if(leftHeld)paddle.x=Math.max(0,paddle.x-paddle.speed);
+  if(rightHeld)paddle.x=Math.min(W-paddle.w,paddle.x+paddle.speed);
+  if(!launched){ball.x=paddle.x+paddle.w/2;}
+},16);
+
+document.getElementById('newBtn').addEventListener('click',function(){reset(true);cancelAnimationFrame(raf);raf=requestAnimationFrame(step);});
+document.getElementById('okBtn').addEventListener('click',function(){
+  if(msg.querySelector('button').textContent==='下一关'){reset(false);}
+  else{reset(true);}
+  cancelAnimationFrame(raf); raf=requestAnimationFrame(step);
+});
+
+reset(true);
+raf=requestAnimationFrame(step);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>lookup_pairs.xlsx - Excel</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#f3f2f1;color:#000;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:14px;height:100vh;overflow:hidden;user-select:none}
+.xl-title{background:#217346;color:#fff;height:30px;display:flex;align-items:center;padding:0 12px;font-size:13px;gap:8px}
+.xl-ribbon{background:#f3f2f1;border-bottom:1px solid #d4d4d4;height:28px;display:flex;align-items:center;padding:0 12px;gap:20px;font-size:13px;color:#444}
+.xl-ribbon .active{color:#217346;font-weight:600;border-bottom:2px solid #217346;padding-bottom:4px}
+.xl-formula{background:#fff;border-bottom:1px solid #d4d4d4;height:26px;display:flex;align-items:center;font-size:13px}
+.xl-namebox{width:80px;border-right:1px solid #d4d4d4;padding:0 8px;height:100%;display:flex;align-items:center;color:#444}
+.xl-fx{padding:0 10px;color:#888;font-style:italic}
+.xl-main{display:flex;height:calc(100vh - 30px - 28px - 26px - 46px);align-items:flex-start;padding:14px;gap:20px}
+
+table.sheet{border-collapse:collapse}
+table.sheet th{background:#f3f2f1;border:1px solid #d4d4d4;color:#666;font-weight:400;text-align:center;height:20px;width:60px}
+table.sheet th.corner{width:28px}
+table.sheet td.rownum{background:#f3f2f1;border:1px solid #d4d4d4;color:#666;text-align:center;width:28px}
+table.sheet td.cell{border:1px solid #d0d0d0;width:60px;height:56px;text-align:center;vertical-align:middle;background:#e8f0ea;font-size:24px;cursor:pointer;color:#217346;font-weight:600;transition:background .12s}
+table.sheet td.cell:hover{background:#d6e8dc}
+table.sheet td.flip{background:#fff;color:#1565c0;cursor:default}
+table.sheet td.matched{background:#217346;color:#fff;cursor:default}
+
+.pad{display:flex;flex-direction:column;gap:14px;width:180px}
+.pad .stat{font-size:13px;color:#444;line-height:2}
+.pad .stat b{color:#217346;font-size:16px}
+.pad .newbtn{height:36px;font-size:13px;background:#217346;color:#fff;border:none;border-radius:4px;cursor:pointer}
+.pad .size{display:flex;gap:4px}
+.pad .size button{flex:1;height:28px;font-size:12px;border:1px solid #ccc;background:#fff;border-radius:4px;cursor:pointer;color:#444}
+.pad .size button.on{background:#217346;color:#fff;border-color:#217346}
+.pad .tip{font-size:12px;color:#888;line-height:1.8}
+.xl-tabs{background:#f3f2f1;border-top:1px solid #d4d4d4;height:24px;display:flex;align-items:center;padding:0 8px;gap:2px;font-size:12px}
+.xl-tab{padding:2px 12px;color:#444}
+.xl-tab.active{background:#fff;border:1px solid #d4d4d4;border-bottom:none;color:#217346;font-weight:600}
+.xl-status{background:#217346;color:#fff;height:22px;display:flex;align-items:center;padding:0 12px;font-size:12px;justify-content:space-between}
+.game-msg{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:50;background:#fff;border-top:4px solid #217346;padding:22px 34px;box-shadow:0 8px 30px rgba(0,0,0,.25);text-align:center;display:none;border-radius:2px}
+.game-msg.show{display:block}
+.game-msg .t{font-size:16px;color:#217346;font-weight:700;margin-bottom:8px}
+.game-msg button{margin-top:12px;background:#217346;color:#fff;border:none;padding:6px 18px;border-radius:3px;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="xl-title"><span>📊</span><span>lookup_pairs.xlsx - Excel</span></div>
+<div class="xl-ribbon"><span>文件</span><span class="active">开始</span><span>插入</span><span>页面布局</span><span>公式</span><span>数据</span><span>审阅</span><span>视图</span></div>
+<div class="xl-formula"><div class="xl-namebox">A1</div><div class="xl-fx">fx</div><div style="padding:0 10px;color:#333">=VLOOKUP(key, table, match_pair)</div></div>
+
+<div class="xl-main">
+  <table class="sheet" id="sheet"></table>
+  <div class="pad">
+    <div class="stat">步数：<b id="moves">0</b><br>已配对：<b id="pairs">0</b></div>
+    <div class="size">
+      <button data-n="4" class="on">4×4</button>
+      <button data-n="6">4×6</button>
+      <button data-n="8">4×8</button>
+    </div>
+    <button class="newbtn" id="newBtn">↻ 重新加载</button>
+    <div class="tip">点开两格，图案相同即匹配<br>全部配对成功即完成<br>考验记忆力 🧠</div>
+  </div>
+</div>
+
+<div class="xl-tabs"><span class="xl-tab active">Sheet1</span><span class="xl-tab">匹配结果</span><span style="color:#888;margin-left:6px">＋</span></div>
+<div class="xl-status"><div><span id="statusText">就绪</span></div><div><span id="progress">0%</span></div></div>
+
+<div class="game-msg" id="gameMsg"><div class="t">✓ 全部匹配完成</div><div id="msgBody"></div><button id="okBtn">再来一局</button></div>
+
+<script>
+(function(){
+'use strict';
+var COLS=4, ROWS=4;   // ROWS 可变
+var SYMBOLS=['📈','📉','💰','📊','🧮','📋','💹','🗂️','📌','🔖','🧾','⭐','🔺','🔻','⚡','🎯'];
+var cards=[];   // {sym, flipped, matched}
+var first=null, second=null, lock=false, moves=0, matched=0;
+var sheetEl=document.getElementById('sheet');
+var movesEl=document.getElementById('moves'), pairsEl=document.getElementById('pairs');
+var progEl=document.getElementById('progress'), statusText=document.getElementById('statusText');
+var msg=document.getElementById('gameMsg');
+var COLNAMES=['A','B','C','D'];
+
+function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
+
+function newGame(){
+  var total=COLS*ROWS;
+  var pairs=total/2;
+  var syms=SYMBOLS.slice(0,pairs);
+  var deck=shuffle(syms.concat(syms));
+  cards=deck.map(function(s){return {sym:s,flipped:false,matched:false};});
+  first=second=null; lock=false; moves=0; matched=0;
+  updateStat(); render();
+  msg.classList.remove('show'); statusText.textContent='就绪';
+}
+
+function render(){
+  var html='<tr><th class="corner"></th>';
+  for(var c=0;c<COLS;c++)html+='<th>'+COLNAMES[c]+'</th>';
+  html+='</tr>';
+  for(var r=0;r<ROWS;r++){
+    html+='<tr><td class="rownum">'+(r+1)+'</td>';
+    for(var c=0;c<COLS;c++){
+      var i=r*COLS+c, card=cards[i];
+      var cls='cell', txt='';
+      if(card.matched){cls='cell matched';txt=card.sym;}
+      else if(card.flipped){cls='cell flip';txt=card.sym;}
+      html+='<td class="'+cls+'" data-i="'+i+'">'+txt+'</td>';
+    }
+    html+='</tr>';
+  }
+  sheetEl.innerHTML=html;
+}
+
+function updateStat(){
+  movesEl.textContent=moves;
+  pairsEl.textContent=matched;
+  var total=COLS*ROWS/2;
+  progEl.textContent=Math.round(matched/total*100)+'%';
+}
+
+function flip(i){
+  if(lock)return;
+  var card=cards[i];
+  if(card.flipped||card.matched)return;
+  card.flipped=true; render();
+  if(!first){first=i;return;}
+  second=i; moves++; updateStat();
+  if(cards[first].sym===cards[second].sym){
+    cards[first].matched=cards[second].matched=true;
+    matched++; first=second=null;
+    updateStat(); render();
+    if(matched===COLS*ROWS/2)win();
+  }else{
+    lock=true;
+    setTimeout(function(){
+      cards[first].flipped=cards[second].flipped=false;
+      first=second=null; lock=false; render();
+    },700);
+  }
+}
+
+function win(){
+  statusText.textContent='✓ 全部匹配完成';
+  document.getElementById('msgBody').innerHTML='共用 <b>'+moves+'</b> 步完成全部配对。';
+  msg.classList.add('show');
+}
+
+sheetEl.addEventListener('click',function(e){
+  var td=e.target.closest('td[data-i]');
+  if(!td)return;
+  flip(+td.dataset.i);
+});
+
+document.querySelectorAll('.pad .size button').forEach(function(b){
+  b.addEventListener('click',function(){
+    document.querySelectorAll('.pad .size button').forEach(function(x){x.classList.remove('on');});
+    b.classList.add('on');
+    ROWS=+b.dataset.n;
+    newGame();
+  });
+});
+
+document.getElementById('newBtn').addEventListener('click',newGame);
+document.getElementById('okBtn').addEventListener('click',newGame);
+newGame();
+})();
+</script>
+</body>
+</html>

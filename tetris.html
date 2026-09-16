@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>pivot_data.xlsx - Excel</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#f3f2f1;color:#000;font-family:'Segoe UI',Calibri,Arial,sans-serif;font-size:14px;height:100vh;overflow:hidden;user-select:none}
+.xl-title{background:#217346;color:#fff;height:30px;display:flex;align-items:center;padding:0 12px;font-size:13px;gap:8px}
+.xl-ribbon{background:#f3f2f1;border-bottom:1px solid #d4d4d4;height:28px;display:flex;align-items:center;padding:0 12px;gap:20px;font-size:13px;color:#444}
+.xl-ribbon .active{color:#217346;font-weight:600;border-bottom:2px solid #217346;padding-bottom:4px}
+.xl-formula{background:#fff;border-bottom:1px solid #d4d4d4;height:26px;display:flex;align-items:center;font-size:13px}
+.xl-namebox{width:80px;border-right:1px solid #d4d4d4;padding:0 8px;height:100%;display:flex;align-items:center;color:#444}
+.xl-fx{padding:0 10px;color:#888;font-style:italic}
+.xl-main{display:flex;height:calc(100vh - 30px - 28px - 26px - 46px);align-items:flex-start;padding:14px;gap:20px}
+.grid-wrap{background:#fff;border:1px solid #d4d4d4}
+canvas{display:block}
+.pad{display:flex;flex-direction:column;gap:14px;width:180px}
+.pad .stat{font-size:13px;color:#444;line-height:2}
+.pad .stat b{color:#217346;font-size:16px}
+.pad .newbtn{height:36px;font-size:13px;background:#217346;color:#fff;border:none;border-radius:4px;cursor:pointer}
+.pad .tip{font-size:12px;color:#888;line-height:1.8}
+.xl-tabs{background:#f3f2f1;border-top:1px solid #d4d4d4;height:24px;display:flex;align-items:center;padding:0 8px;gap:2px;font-size:12px}
+.xl-tab{padding:2px 12px;color:#444}
+.xl-tab.active{background:#fff;border:1px solid #d4d4d4;border-bottom:none;color:#217346;font-weight:600}
+.xl-status{background:#217346;color:#fff;height:22px;display:flex;align-items:center;padding:0 12px;font-size:12px;justify-content:space-between}
+.game-msg{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:50;background:#fff;border-top:4px solid #217346;padding:22px 34px;box-shadow:0 8px 30px rgba(0,0,0,.25);text-align:center;display:none;border-radius:2px}
+.game-msg.show{display:block}
+.game-msg .t{font-size:16px;color:#217346;font-weight:700;margin-bottom:8px}
+.game-msg button{margin-top:12px;background:#217346;color:#fff;border:none;padding:6px 18px;border-radius:3px;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="xl-title"><span>📊</span><span>pivot_data.xlsx - Excel</span></div>
+<div class="xl-ribbon"><span>文件</span><span class="active">开始</span><span>插入</span><span>页面布局</span><span>公式</span><span>数据</span><span>审阅</span><span>视图</span></div>
+<div class="xl-formula"><div class="xl-namebox">A1</div><div class="xl-fx">fx</div><div style="padding:0 10px;color:#333">=STACK(range, auto_fill)</div></div>
+
+<div class="xl-main">
+  <div class="grid-wrap"><canvas id="cv" width="240" height="480"></canvas></div>
+  <div class="pad">
+    <div class="stat">得分：<b id="score">0</b><br>消行：<b id="lines">0</b><br>等级：<b id="level">1</b></div>
+    <div class="stat" style="font-size:12px;color:#666">下一个：<canvas id="next" width="80" height="80" style="border:1px solid #ddd;background:#fff;vertical-align:middle"></canvas></div>
+    <button class="newbtn" id="newBtn">↻ 重新开始</button>
+    <div class="tip">← → 移动 · ↑ 旋转<br>↓ 加速下落 · 空格 直接落底<br>P 暂停</div>
+  </div>
+</div>
+
+<div class="xl-tabs"><span class="xl-tab active">Sheet1</span><span class="xl-tab">透视表</span><span style="color:#888;margin-left:6px">＋</span></div>
+<div class="xl-status"><div><span id="statusText">就绪</span></div><div><span id="cellRef">R0C0</span></div></div>
+
+<div class="game-msg" id="gameMsg"><div class="t" id="msgTitle">数据溢出</div><div id="msgBody"></div><button id="okBtn">重新开始</button></div>
+
+<script>
+(function(){
+'use strict';
+var COLS=10, ROWS=20, CELL=24;
+var cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+var nextCv=document.getElementById('next'), nctx=nextCv.getContext('2d');
+var scoreEl=document.getElementById('score'), linesEl=document.getElementById('lines'), levelEl=document.getElementById('level');
+var statusText=document.getElementById('statusText'), cellRef=document.getElementById('cellRef');
+var msg=document.getElementById('gameMsg');
+
+// 7 种方块，用 Excel 风格的绿/蓝/橙配色（像不同数据系列）
+var SHAPES={
+  I:{c:'#3aa0ff',m:[[1,1,1,1]]},
+  O:{c:'#f0b429',m:[[1,1],[1,1]]},
+  T:{c:'#7b61ff',m:[[0,1,0],[1,1,1]]},
+  S:{c:'#2fb344',m:[[0,1,1],[1,1,0]]},
+  Z:{c:'#e5484d',m:[[1,1,0],[0,1,1]]},
+  J:{c:'#217346',m:[[1,0,0],[1,1,1]]},
+  L:{c:'#f5821f',m:[[0,0,1],[1,1,1]]}
+};
+var KEYS=Object.keys(SHAPES);
+var grid, cur, next, score, lines, level, dropTimer, dropInterval, over, paused;
+
+function newPiece(){
+  var k=KEYS[Math.floor(Math.random()*KEYS.length)];
+  var s=SHAPES[k];
+  return {m:s.m.map(function(r){return r.slice();}), c:s.c, x:Math.floor((COLS-s.m[0].length)/2), y:0};
+}
+
+function reset(){
+  grid=[]; for(var r=0;r<ROWS;r++){grid[r]=[];for(var c=0;c<COLS;c++)grid[r][c]=null;}
+  score=0; lines=0; level=1; over=false; paused=false;
+  dropInterval=700;
+  cur=newPiece(); next=newPiece();
+  updateStat();
+  msg.classList.remove('show');
+  statusText.textContent='就绪';
+  clearInterval(dropTimer);
+  dropTimer=setInterval(tick, dropInterval);
+  draw();
+}
+
+function collide(m,x,y){
+  for(var r=0;r<m.length;r++)for(var c=0;c<m[r].length;c++){
+    if(!m[r][c])continue;
+    var nx=x+c, ny=y+r;
+    if(nx<0||nx>=COLS||ny>=ROWS)return true;
+    if(ny>=0&&grid[ny][nx])return true;
+  }
+  return false;
+}
+
+function merge(){
+  for(var r=0;r<cur.m.length;r++)for(var c=0;c<cur.m[r].length;c++){
+    if(cur.m[r][c]){var ny=cur.y+r; if(ny>=0)grid[ny][cur.x+c]=cur.c;}
+  }
+}
+
+function rotate(){
+  var m=cur.m, n=m.length, w=m[0].length;
+  var nm=[]; for(var c=0;c<w;c++){nm[c]=[];for(var r=n-1;r>=0;r--)nm[c].push(m[r][c]);}
+  if(!collide(nm,cur.x,cur.y))cur.m=nm;
+  else if(!collide(nm,cur.x-1,cur.y)){cur.x--;cur.m=nm;}
+  else if(!collide(nm,cur.x+1,cur.y)){cur.x++;cur.m=nm;}
+}
+
+function clearLines(){
+  var cleared=0;
+  for(var r=ROWS-1;r>=0;r--){
+    var full=true; for(var c=0;c<COLS;c++)if(!grid[r][c]){full=false;break;}
+    if(full){grid.splice(r,1);grid.unshift(new Array(COLS).fill(null));cleared++;r++;}
+  }
+  if(cleared){
+    lines+=cleared;
+    score+=[0,100,300,500,800][cleared]*level;
+    var nl=Math.floor(lines/10)+1;
+    if(nl!==level){level=nl;dropInterval=Math.max(120,700-(level-1)*60);clearInterval(dropTimer);dropTimer=setInterval(tick,dropInterval);}
+    updateStat();
+  }
+}
+
+function lock(){
+  merge(); clearLines();
+  cur=next; next=newPiece();
+  if(collide(cur.m,cur.x,cur.y))gameOver();
+}
+
+function gameOver(){
+  over=true; clearInterval(dropTimer);
+  statusText.textContent='数据溢出';
+  document.getElementById('msgBody').innerHTML='堆栈已满，得分 <b>'+score+'</b>，消除 '+lines+' 行。';
+  msg.classList.add('show');
+}
+
+function tick(){
+  if(over||paused)return;
+  if(!collide(cur.m,cur.x,cur.y+1))cur.y++;
+  else lock();
+  draw();
+}
+
+function hardDrop(){
+  if(over||paused)return;
+  while(!collide(cur.m,cur.x,cur.y+1))cur.y++;
+  lock(); draw();
+}
+
+function updateStat(){scoreEl.textContent=score;linesEl.textContent=lines;levelEl.textContent=level;}
+
+function drawCell(g,x,y,color){
+  g.fillStyle=color;
+  g.fillRect(x*CELL+1,y*CELL+1,CELL-2,CELL-2);
+  g.fillStyle='rgba(255,255,255,.25)';
+  g.fillRect(x*CELL+1,y*CELL+1,CELL-2,4);
+}
+
+function draw(){
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,cv.width,cv.height);
+  // 淡网格线，像单元格
+  ctx.strokeStyle='#eee'; ctx.lineWidth=1;
+  for(var c=0;c<=COLS;c++){ctx.beginPath();ctx.moveTo(c*CELL,0);ctx.lineTo(c*CELL,cv.height);ctx.stroke();}
+  for(var r=0;r<=ROWS;r++){ctx.beginPath();ctx.moveTo(0,r*CELL);ctx.lineTo(cv.width,r*CELL);ctx.stroke();}
+  for(var r=0;r<ROWS;r++)for(var c=0;c<COLS;c++)if(grid[r][c])drawCell(ctx,c,r,grid[r][c]);
+  for(var r=0;r<cur.m.length;r++)for(var c=0;c<cur.m[r].length;c++)if(cur.m[r][c]){var yy=cur.y+r;if(yy>=0)drawCell(ctx,cur.x+c,yy,cur.c);}
+  cellRef.textContent='R'+(cur.y)+'C'+(cur.x);
+  // next 预览
+  nctx.fillStyle='#fff'; nctx.fillRect(0,0,80,80);
+  var m=next.m, offx=(4-m[0].length)/2, offy=(4-m.length)/2;
+  for(var r=0;r<m.length;r++)for(var c=0;c<m[r].length;c++)if(m[r][c]){
+    nctx.fillStyle=next.c; nctx.fillRect((c+offx)*18+2,(r+offy)*18+2,16,16);
+  }
+}
+
+document.addEventListener('keydown',function(e){
+  if(over)return;
+  if(e.key==='p'||e.key==='P'){paused=!paused;statusText.textContent=paused?'已暂停':'就绪';return;}
+  if(paused)return;
+  if(e.key==='ArrowLeft'){if(!collide(cur.m,cur.x-1,cur.y))cur.x--;e.preventDefault();}
+  else if(e.key==='ArrowRight'){if(!collide(cur.m,cur.x+1,cur.y))cur.x++;e.preventDefault();}
+  else if(e.key==='ArrowDown'){if(!collide(cur.m,cur.x,cur.y+1))cur.y++;e.preventDefault();}
+  else if(e.key==='ArrowUp'){rotate();e.preventDefault();}
+  else if(e.key===' '){hardDrop();e.preventDefault();return;}
+  draw();
+});
+
+document.getElementById('newBtn').addEventListener('click',reset);
+document.getElementById('okBtn').addEventListener('click',reset);
+reset();
+})();
+</script>
+</body>
+</html>
