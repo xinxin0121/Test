@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>时钟</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{
+  background:#0a0a0a;
+  color:#000;
+  font-family:'Segoe UI',-apple-system,'Microsoft YaHei',sans-serif;
+  display:flex;align-items:center;justify-content:center;
+  min-height:100vh;
+  user-select:none;
+}
+
+/* 中间大时钟（好看的展示用）*/
+.big-clock{
+  text-align:center;
+  color:#f0f0f0;
+}
+.big-time{
+  font-size:clamp(48px,16vw,140px);
+  font-weight:200;
+  letter-spacing:2px;
+  font-variant-numeric:tabular-nums;   /* 数字等宽，跳秒不抖动 */
+  line-height:1;
+}
+.big-time .sec{color:#3aa0ff;font-weight:300}
+.big-date{
+  font-size:clamp(16px,4vw,28px);
+  font-weight:300;
+  color:#aaa;
+  margin-top:14px;
+}
+.big-week{color:#777;font-size:clamp(14px,3vw,20px);margin-top:4px}
+
+/* 右下角：仿 Windows 11 任务栏时钟 */
+.taskbar-clock{
+  position:fixed;right:0;bottom:0;
+  background:#e9e9e9;
+  color:#1a1a1a;
+  padding:6px 14px 6px 18px;
+  font-size:12px;
+  line-height:1.4;
+  text-align:right;
+  border-top-left-radius:6px;
+  box-shadow:-2px -2px 8px rgba(0,0,0,.15);
+  min-width:120px;
+}
+.tb-time{font-size:12.5px}
+.tb-date{font-size:12.5px}
+
+@media (prefers-color-scheme: dark){
+  /* 保持中间深色不变，任务栏也给个深色版更像 Win11 深色主题 */
+}
+</style>
+</head>
+<body>
+
+<!-- 中间大时钟 -->
+<div class="big-clock">
+  <div class="big-time" id="bigTime">--:--:--</div>
+  <div class="big-date" id="bigDate">----/--/--</div>
+  <div class="big-week" id="bigWeek">星期—</div>
+</div>
+
+<!-- 右下角仿 Windows 任务栏 -->
+<div class="taskbar-clock">
+  <div class="tb-time" id="tbTime">--:--:--</div>
+  <div class="tb-date" id="tbDate">----/--/--</div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+var weekCn = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
+
+var bigTime = document.getElementById('bigTime');
+var bigDate = document.getElementById('bigDate');
+var bigWeek = document.getElementById('bigWeek');
+var tbTime = document.getElementById('tbTime');
+var tbDate = document.getElementById('tbDate');
+
+function pad(n){ return n < 10 ? '0'+n : ''+n; }
+
+function tick(){
+  var d = new Date();
+  var hh = pad(d.getHours());
+  var mm = pad(d.getMinutes());
+  var ss = pad(d.getSeconds());
+  var dateStr = d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate();
+
+  // 中间大钟：秒用蓝色高亮
+  bigTime.innerHTML = hh+':'+mm+':<span class="sec">'+ss+'</span>';
+  bigDate.textContent = dateStr;
+  bigWeek.textContent = weekCn[d.getDay()];
+
+  // 右下角任务栏：时:分:秒 + 日期（和 Windows 排版一致）
+  tbTime.textContent = hh+':'+mm+':'+ss;
+  tbDate.textContent = dateStr;
+}
+
+tick();
+setInterval(tick, 1000);
+})();
+</script>
+</body>
+</html>
