@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>JNBTeam - 敏捷看板</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#f4f5f7;color:#172b4d;font-family:-apple-system,'Segoe UI',Roboto,'Microsoft YaHei',sans-serif;font-size:14px;height:100vh;overflow:hidden;user-select:none}
+
+/* Jira 顶栏 */
+.jr-top{background:#fff;border-bottom:1px solid #dfe1e6;height:48px;display:flex;align-items:center;padding:0 16px;gap:14px}
+.jr-logo{display:flex;align-items:center;gap:8px;font-weight:600;color:#172b4d}
+.jr-logo .sq{width:24px;height:24px;background:linear-gradient(135deg,#2684ff,#0052cc);border-radius:4px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px}
+.jr-nav{display:flex;gap:18px;color:#42526e;font-size:14px;margin-left:10px}
+.jr-nav span{cursor:default}
+.jr-right{margin-left:auto;display:flex;gap:12px;align-items:center;color:#42526e}
+.jr-avatar{width:28px;height:28px;border-radius:50%;background:#0052cc;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px}
+
+/* 面包屑 + 标题 */
+.jr-head{background:#fff;padding:10px 20px 0}
+.jr-crumb{font-size:12px;color:#5e6c84}
+.jr-title{font-size:20px;font-weight:600;margin:4px 0 10px;display:flex;align-items:center;gap:12px}
+.jr-sprint{font-size:12px;background:#e9f2ff;color:#0052cc;padding:2px 8px;border-radius:3px;font-weight:400}
+
+/* 资源统计条(伪装成 sprint 统计) */
+.jr-stats{display:flex;gap:22px;padding:8px 20px;background:#fff;border-bottom:1px solid #dfe1e6;font-size:13px;flex-wrap:wrap}
+.jr-stat{display:flex;align-items:center;gap:6px;color:#42526e}
+.jr-stat b{color:#172b4d;font-size:15px}
+.jr-stat .ico{font-size:15px}
+
+/* 看板列 */
+.board{display:flex;gap:12px;padding:16px 20px;overflow-x:auto;height:calc(100vh - 48px - 92px - 40px)}
+.col{background:#f1f2f4;border-radius:6px;width:250px;flex-shrink:0;display:flex;flex-direction:column;max-height:100%}
+.col-head{padding:10px 12px;font-size:12px;font-weight:600;color:#5e6c84;text-transform:uppercase;letter-spacing:.5px;display:flex;justify-content:space-between}
+.col-body{padding:0 8px 8px;overflow-y:auto;flex:1}
+
+/* 卡片(建筑) */
+.card{background:#fff;border-radius:5px;padding:10px 12px;margin-bottom:8px;box-shadow:0 1px 1px rgba(9,30,66,.2);cursor:pointer;position:relative}
+.card:hover{background:#f7f8f9}
+.card .ctitle{font-size:14px;margin-bottom:8px;color:#172b4d}
+.card .cico{font-size:16px;margin-right:5px}
+.card .cmeta{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:#5e6c84}
+.card .tag{font-size:11px;padding:1px 6px;border-radius:3px;font-weight:600}
+.tag-story{background:#e9f2ff;color:#0052cc}
+.tag-task{background:#e3fcef;color:#006644}
+.tag-done{background:#dfe1e6;color:#42526e}
+.card .assignee{width:22px;height:22px;border-radius:50%;background:#6554c0;color:#fff;font-size:10px;display:flex;align-items:center;justify-content:center}
+.card .progress{height:4px;background:#dfe1e6;border-radius:2px;margin-top:8px;overflow:hidden}
+.card .progress .bar{height:100%;background:#0052cc;width:0%;transition:width .3s}
+.card.ready .progress .bar{background:#00875a}
+.card .prod{font-size:11px;color:#00875a;margin-top:6px}
+
+.add-card{padding:8px 12px;color:#5e6c84;font-size:13px;cursor:pointer;border-radius:5px}
+.add-card:hover{background:#e4e6ea;color:#172b4d}
+
+/* 弹窗 */
+.modal-bg{position:fixed;inset:0;background:rgba(9,30,66,.54);z-index:100;display:none;align-items:center;justify-content:center}
+.modal-bg.show{display:flex}
+.modal{background:#fff;border-radius:6px;width:440px;max-width:92vw;max-height:88vh;overflow:auto;box-shadow:0 8px 30px rgba(9,30,66,.4)}
+.modal-head{padding:14px 20px;border-bottom:1px solid #dfe1e6;font-size:12px;color:#5e6c84;display:flex;justify-content:space-between}
+.modal-body{padding:18px 20px}
+.modal-body h2{font-size:18px;margin-bottom:14px;color:#172b4d}
+.shop{display:flex;align-items:center;gap:12px;padding:10px;border:1px solid #dfe1e6;border-radius:5px;margin-bottom:8px}
+.shop .sico{font-size:26px}
+.shop .sinfo{flex:1}
+.shop .sname{font-weight:600}
+.shop .sdesc{font-size:12px;color:#5e6c84;margin-top:2px}
+.shop .buy{background:#0052cc;color:#fff;border:none;padding:6px 14px;border-radius:3px;cursor:pointer;font-size:13px}
+.shop .buy:disabled{background:#dfe1e6;color:#a5adba;cursor:not-allowed}
+.close-x{cursor:pointer;font-size:16px;color:#5e6c84}
+
+.assign-item{display:flex;align-items:center;gap:10px;padding:8px;border:1px solid #dfe1e6;border-radius:5px;margin-bottom:6px;cursor:pointer}
+.assign-item:hover{background:#f4f5f7}
+.assign-item.busy{opacity:.5;cursor:not-allowed}
+.assign-item .av{width:30px;height:30px;border-radius:50%;background:#6554c0;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px}
+
+.btn{background:#0052cc;color:#fff;border:none;padding:8px 16px;border-radius:3px;cursor:pointer;font-size:14px}
+.btn.sec{background:#f4f5f7;color:#42526e;border:1px solid #dfe1e6}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#172b4d;color:#fff;padding:10px 18px;border-radius:4px;font-size:13px;z-index:200;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.show{opacity:1}
+.offline-note{background:#e3fcef;border:1px solid #abf5d1;color:#006644;padding:8px 12px;border-radius:5px;font-size:13px;margin:10px 20px 0}
+</style>
+</head>
+<body>
+
+<div class="jr-top">
+  <div class="jr-logo"><div class="sq">J</div>Jira</div>
+  <div class="jr-nav"><span>你的工作</span><span>项目</span><span>筛选器</span><span>仪表板</span></div>
+  <div class="jr-right"><span>🔍</span><span>❓</span><div class="jr-avatar">ZF</div></div>
+</div>
+
+<div class="jr-head">
+  <div class="jr-crumb">项目 / 江南营造 / 看板</div>
+  <div class="jr-title">JNB Sprint 看板 <span class="jr-sprint" id="sprintLabel">Sprint 1 · 运营中</span></div>
+</div>
+
+<!-- 资源(伪装成 sprint 指标) -->
+<div class="jr-stats">
+  <div class="jr-stat"><span class="ico">💰</span>预算(铜钱)：<b id="rCoin">0</b></div>
+  <div class="jr-stat"><span class="ico">🌾</span>物料(米粮)：<b id="rFood">0</b></div>
+  <div class="jr-stat"><span class="ico">🪵</span>资源(木材)：<b id="rWood">0</b></div>
+  <div class="jr-stat"><span class="ico">👥</span>成员：<b id="rPop">0</b></div>
+  <div class="jr-stat" style="margin-left:auto"><span class="ico">⭐</span>迭代 <b id="rLevel">1</b></div>
+</div>
+
+<div class="offline-note" id="offlineNote" hidden></div>
+
+<!-- 看板 -->
+<div class="board" id="board"></div>
+
+<!-- 商店弹窗 -->
+<div class="modal-bg" id="shopModal">
+  <div class="modal">
+    <div class="modal-head"><span>新建工作项 · 立项</span><span class="close-x" data-close>✕</span></div>
+    <div class="modal-body">
+      <h2>选择要营造的产业</h2>
+      <div id="shopList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 派工弹窗 -->
+<div class="modal-bg" id="assignModal">
+  <div class="modal">
+    <div class="modal-head"><span>分配负责人</span><span class="close-x" data-close>✕</span></div>
+    <div class="modal-body">
+      <h2 id="assignTitle">分配负责人</h2>
+      <div id="assignList"></div>
+      <div style="margin-top:12px;text-align:right"><button class="btn sec" data-close>取消</button></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+'use strict';
+
+var SAVE_KEY = 'jiangnan_town_save_v1';
+
+// —— 建筑定义 ——
+// produce: 每个生产周期产出；cycle: 秒；needs: 建造消耗
+var BUILDINGS = {
+  farm:   {name:'米铺',   ico:'🌾', desc:'派人耕作，产出米粮',       cost:{coin:0,   wood:10}, produce:{food:8},  cycle:12, tag:'物料'},
+  loom:   {name:'织坊',   ico:'🧵', desc:'织造布匹，换取铜钱',       cost:{coin:20,  wood:15}, produce:{coin:12}, cycle:15, tag:'营收'},
+  tea:    {name:'茶馆',   ico:'🍵', desc:'待客经营，铜钱进账',       cost:{coin:60,  wood:20}, produce:{coin:25}, cycle:18, tag:'营收'},
+  wood:   {name:'木场',   ico:'🪵', desc:'伐木备料，产出木材',       cost:{coin:40,  food:20}, produce:{wood:10}, cycle:14, tag:'资源'},
+  house:  {name:'民居',   ico:'🏠', desc:'招徕居民，增加可用成员',   cost:{coin:80,  wood:40, food:30}, produce:{pop:1}, cycle:0, tag:'人口', once:true},
+  market: {name:'集市',   ico:'🏮', desc:'高级营收，铜钱大量进账',   cost:{coin:200, wood:80, food:60}, produce:{coin:60}, cycle:20, tag:'营收'}
+};
+
+// —— 可招募的古风角色名 ——
+var NAME_POOL = ['文徵明','李时珍','汤显祖','董小宛','沈万三','唐伯虎','徐霞客','柳如是','秦淮八艳','祝枝山','归有光','海瑞'];
+
+// —— 游戏状态 ——
+var state = null;
+
+function defaultState(){
+  return {
+    coin: 50, food: 30, wood: 40, level: 1,
+    workers: [ {name:'文徵明', busy:null}, {name:'李时珍', busy:null} ],
+    buildings: [],   // {id, type, assignee(workerIdx or null), lastTick(ms)}
+    nextId: 1,
+    lastSave: Date.now()
+  };
+}
+
+function load(){
+  try{
+    var raw = localStorage.getItem(SAVE_KEY);
+    if(raw){ state = JSON.parse(raw); return true; }
+  }catch(e){}
+  state = defaultState();
+  return false;
+}
+function save(){
+  try{ state.lastSave = Date.now(); localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }catch(e){}
+}
+
+// —— 离线产出结算 ——
+function settleOffline(){
+  var now = Date.now();
+  var elapsed = Math.floor((now - (state.lastSave||now))/1000); // 秒
+  if(elapsed < 5) return null;
+  elapsed = Math.min(elapsed, 60*60*8); // 最多结算 8 小时，别爆表
+  var gain = {coin:0, food:0, wood:0};
+  state.buildings.forEach(function(b){
+    if(b.assignee===null) return;
+    var def = BUILDINGS[b.type];
+    if(!def.cycle) return;
+    var cycles = Math.floor(elapsed / def.cycle);
+    for(var k in def.produce){ if(gain[k]!==undefined) gain[k] += def.produce[k]*cycles; }
+  });
+  state.coin += gain.coin; state.food += gain.food; state.wood += gain.wood;
+  if(gain.coin||gain.food||gain.wood) return gain;
+  return null;
+}
+
+// —— 生产循环(在线) ——
+function productionTick(){
+  var now = Date.now();
+  state.buildings.forEach(function(b){
+    var def = BUILDINGS[b.type];
+    if(!def.cycle || b.assignee===null) return;
+    if(!b.lastTick) b.lastTick = now;
+    if(now - b.lastTick >= def.cycle*1000){
+      b.lastTick = now;
+      for(var k in def.produce){
+        if(k==='coin') state.coin += def.produce[k];
+        else if(k==='food') state.food += def.produce[k];
+        else if(k==='wood') state.wood += def.produce[k];
+      }
+    }
+  });
+  updateResources();
+  renderBoard();
+}
+
+// —— 渲染资源栏 ——
+function updateResources(){
+  document.getElementById('rCoin').textContent = Math.floor(state.coin);
+  document.getElementById('rFood').textContent = Math.floor(state.food);
+  document.getElementById('rWood').textContent = Math.floor(state.wood);
+  document.getElementById('rPop').textContent = state.workers.length;
+  document.getElementById('rLevel').textContent = state.level;
+  document.getElementById('sprintLabel').textContent = 'Sprint '+state.level+' · 运营中';
+}
+
+// —— 渲染看板 ——
+// 三列：待建(可立项) / 运营中(已派人在产) / 待办(已建未派人)
+function renderBoard(){
+  var board = document.getElementById('board');
+  var running = [], todo = [];
+  state.buildings.forEach(function(b, i){
+    if(b.assignee!==null) running.push({b:b,i:i});
+    else todo.push({b:b,i:i});
+  });
+
+  var html = '';
+  // 列1：待办事项(未派人)
+  html += '<div class="col"><div class="col-head"><span>待办 · TO DO</span><span>'+todo.length+'</span></div><div class="col-body">';
+  todo.forEach(function(o){ html += cardHtml(o.b, o.i, false); });
+  html += '<div class="add-card" data-shop>＋ 新建工作项</div>';
+  html += '</div></div>';
+
+  // 列2：进行中(已派人生产)
+  html += '<div class="col"><div class="col-head"><span>进行中 · IN PROGRESS</span><span>'+running.length+'</span></div><div class="col-body">';
+  running.forEach(function(o){ html += cardHtml(o.b, o.i, true); });
+  html += '</div></div>';
+
+  // 列3：团队成员(伪装)
+  html += '<div class="col"><div class="col-head"><span>团队 · TEAM</span><span>'+state.workers.length+'</span></div><div class="col-body">';
+  state.workers.forEach(function(w){
+    var status = w.busy!==null ? '处理中' : '空闲';
+    var tagcls = w.busy!==null ? 'tag-task' : 'tag-done';
+    html += '<div class="card"><div class="ctitle">👤 '+w.name+'</div>'+
+      '<div class="cmeta"><span class="tag '+tagcls+'">'+status+'</span>'+
+      '<div class="assignee">'+initials(w.name)+'</div></div></div>';
+  });
+  html += '</div></div>';
+
+  board.innerHTML = html;
+}
+
+function cardHtml(b, idx, isRunning){
+  var def = BUILDINGS[b.type];
+  var pct = 0, prodText = '', ready=false;
+  if(isRunning && def.cycle){
+    var elapsed = (Date.now() - (b.lastTick||Date.now()))/1000;
+    pct = Math.min(100, elapsed/def.cycle*100);
+    var pk = Object.keys(def.produce)[0];
+    var pmap = {coin:'💰铜钱',food:'🌾米粮',wood:'🪵木材',pop:'👥人口'};
+    prodText = '每 '+def.cycle+'s 产 '+def.produce[pk]+' '+(pmap[pk]||pk);
+  }
+  var assignee = b.assignee!==null && state.workers[b.assignee] ? state.workers[b.assignee] : null;
+  var tagcls = isRunning ? 'tag-task' : 'tag-story';
+  var tagtxt = isRunning ? '进行中' : def.tag;
+  var h = '<div class="card '+(ready?'ready':'')+'" data-card="'+idx+'">';
+  h += '<div class="ctitle"><span class="cico">'+def.ico+'</span>'+def.name+'</div>';
+  h += '<div class="cmeta"><span class="tag '+tagcls+'">'+tagtxt+'</span>';
+  h += assignee ? '<div class="assignee" title="'+assignee.name+'">'+initials(assignee.name)+'</div>' : '<span style="font-size:11px;color:#5e6c84">未分配</span>';
+  h += '</div>';
+  if(isRunning && def.cycle){
+    h += '<div class="progress"><div class="bar" style="width:'+pct+'%"></div></div>';
+    h += '<div class="prod">'+prodText+'</div>';
+  }
+  h += '</div>';
+  return h;
+}
+
+function initials(name){
+  return name.length<=2 ? name : name.slice(0,2);
+}
+
+// —— 商店 ——
+function openShop(){
+  var list = document.getElementById('shopList');
+  var html = '';
+  for(var type in BUILDINGS){
+    var def = BUILDINGS[type];
+    var costStr = [];
+    if(def.cost.coin) costStr.push('💰'+def.cost.coin);
+    if(def.cost.wood) costStr.push('🪵'+def.cost.wood);
+    if(def.cost.food) costStr.push('🌾'+def.cost.food);
+    var afford = canAfford(def.cost);
+    html += '<div class="shop">';
+    html += '<div class="sico">'+def.ico+'</div>';
+    html += '<div class="sinfo"><div class="sname">'+def.name+'</div>';
+    html += '<div class="sdesc">'+def.desc+'　建造需 '+costStr.join(' ')+'</div></div>';
+    html += '<button class="buy" data-buy="'+type+'" '+(afford?'':'disabled')+'>建造</button>';
+    html += '</div>';
+  }
+  list.innerHTML = html;
+  document.getElementById('shopModal').classList.add('show');
+}
+
+function canAfford(cost){
+  return state.coin>=(cost.coin||0) && state.wood>=(cost.wood||0) && state.food>=(cost.food||0);
+}
+
+function build(type){
+  var def = BUILDINGS[type];
+  if(!canAfford(def.cost)){ toast('资源不足'); return; }
+  state.coin -= def.cost.coin||0;
+  state.wood -= def.cost.wood||0;
+  state.food -= def.cost.food||0;
+
+  if(def.once && def.produce.pop){
+    // 民居：直接招募一个新成员
+    var used = state.workers.map(function(w){return w.name;});
+    var avail = NAME_POOL.filter(function(n){return used.indexOf(n)<0;});
+    var nm = avail.length ? avail[Math.floor(Math.random()*avail.length)] : ('居民'+(state.workers.length+1));
+    state.workers.push({name:nm, busy:null});
+    toast('招募了新成员：'+nm);
+  } else {
+    state.buildings.push({id:state.nextId++, type:type, assignee:null, lastTick:Date.now()});
+    toast('已立项：'+def.name+'（去"待办"派个负责人开工）');
+  }
+  // 迭代升级：建筑越多 sprint 越高
+  state.level = 1 + Math.floor(state.buildings.length/3);
+  save(); updateResources(); renderBoard();
+  document.getElementById('shopModal').classList.remove('show');
+}
+
+// —— 派工 ——
+var assignTarget = null;
+function openAssign(idx){
+  assignTarget = idx;
+  var b = state.buildings[idx];
+  var def = BUILDINGS[b.type];
+  document.getElementById('assignTitle').textContent = '为「'+def.name+'」分配负责人';
+  var list = document.getElementById('assignList');
+  var html = '';
+  state.workers.forEach(function(w, wi){
+    var busy = w.busy!==null && w.busy!==idx;
+    html += '<div class="assign-item '+(busy?'busy':'')+'" '+(busy?'':'data-worker="'+wi+'"')+'>';
+    html += '<div class="av">'+initials(w.name)+'</div>';
+    html += '<div><div style="font-weight:600">'+w.name+'</div>';
+    html += '<div style="font-size:12px;color:#5e6c84">'+(busy?'处理中(已分配其他工作)':'空闲，可分配')+'</div></div>';
+    html += '</div>';
+  });
+  // 也允许撤下当前负责人
+  if(b.assignee!==null){
+    html += '<div class="assign-item" data-worker="-1"><div class="av" style="background:#de350b">停</div>'+
+      '<div><div style="font-weight:600">撤下负责人</div><div style="font-size:12px;color:#5e6c84">暂停该产业</div></div></div>';
+  }
+  list.innerHTML = html;
+  document.getElementById('assignModal').classList.add('show');
+}
+
+function assign(workerIdx){
+  var b = state.buildings[assignTarget];
+  // 先把该建筑原负责人释放
+  if(b.assignee!==null && state.workers[b.assignee]) state.workers[b.assignee].busy = null;
+  if(workerIdx===-1){
+    b.assignee = null;
+  } else {
+    // 释放该 worker 原来的建筑
+    var w = state.workers[workerIdx];
+    if(w.busy!==null && state.buildings[w.busy]) state.buildings[w.busy].assignee = null;
+    b.assignee = workerIdx;
+    b.lastTick = Date.now();
+    w.busy = assignTarget;
+  }
+  save(); updateResources(); renderBoard();
+  document.getElementById('assignModal').classList.remove('show');
+}
+
+// —— toast ——
+var toastTimer=null;
+function toast(msg){
+  var t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(function(){t.classList.remove('show');},2200);
+}
+
+// —— 事件 ——
+document.getElementById('board').addEventListener('click', function(e){
+  if(e.target.closest('[data-shop]')){ openShop(); return; }
+  var card = e.target.closest('[data-card]');
+  if(card){ openAssign(+card.dataset.card); }
+});
+document.getElementById('shopModal').addEventListener('click', function(e){
+  if(e.target.dataset.close!==undefined || e.target===this){ this.classList.remove('show'); return; }
+  var buy=e.target.closest('[data-buy]');
+  if(buy){ build(buy.dataset.buy); }
+});
+document.getElementById('assignModal').addEventListener('click', function(e){
+  if(e.target.dataset.close!==undefined || e.target===this){ this.classList.remove('show'); return; }
+  var w=e.target.closest('[data-worker]');
+  if(w){ assign(+w.dataset.worker); }
+});
+
+// —— 启动 ——
+load();
+var offlineGain = settleOffline();
+if(offlineGain){
+  var parts=[];
+  if(offlineGain.coin) parts.push('💰'+offlineGain.coin);
+  if(offlineGain.food) parts.push('🌾'+offlineGain.food);
+  if(offlineGain.wood) parts.push('🪵'+offlineGain.wood);
+  if(parts.length){
+    var note=document.getElementById('offlineNote');
+    note.hidden=false;
+    note.textContent='📊 离线期间团队持续产出：'+parts.join('  ')+'（已入账）';
+  }
+}
+save();
+updateResources();
+renderBoard();
+
+// 生产循环：每秒 tick
+setInterval(productionTick, 1000);
+// 定期存档
+setInterval(save, 5000);
+window.addEventListener('beforeunload', save);
+
+})();
+</script>
+</body>
+</html>
