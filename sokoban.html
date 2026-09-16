@@ -314,6 +314,7 @@ function undo(){
   player.r=s.pr; player.c=s.pc;
   boxes=s.boxes; moves=s.moves;
   render();
+  if(countOnGoal()===boxes.length){ win(); }
 }
 
 function win(){
@@ -321,7 +322,7 @@ function win(){
   statusText.textContent='✓ 货位整理完成';
   document.getElementById('msgBody').innerHTML='第 <b>'+(levelIdx+1)+'</b> 关完成，共 <b>'+moves+'</b> 步。';
   document.getElementById('okBtn').textContent = (levelIdx<LEVELS.length-1)?'下一关':'重玩本关';
-  msg.classList.add('show');
+  msg.style.display='block';
 }
 
 function render(){
@@ -364,7 +365,7 @@ function render(){
 function loadLevel(i){
   levelIdx=(i+LEVELS.length)%LEVELS.length;
   parseLevel(LEVELS[levelIdx]);
-  msg.classList.remove('show');
+  msg.style.display='none';
   render();
 }
 
