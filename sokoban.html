@@ -18,32 +18,33 @@ body{background:#f3f2f1;color:#000;font-family:'Segoe UI',Calibri,Arial,sans-ser
 .xl-main{display:flex;height:calc(100vh - 30px - 28px - 26px - 46px);align-items:flex-start}
 .grid-wrap{padding:14px;overflow:auto}
 
-/* —— 红白像素风棋盘（复古掌机感）—— */
-table.sheet{border-collapse:collapse}
+/* —— 经典配色棋盘：浅地板 + 深实心墙，对比清晰 —— */
+table.sheet{border-collapse:collapse;background:#5a6270;padding:4px} /* 外框深色，衬出地图轮廓 */
 table.sheet th{background:#f3f2f1;border:1px solid #d4d4d4;color:#666;font-weight:400;text-align:center;height:20px;width:40px;font-size:12px}
 table.sheet th.corner{width:24px}
 table.sheet td.rownum{background:#f3f2f1;border:1px solid #d4d4d4;color:#666;text-align:center;width:24px;font-size:12px}
-table.sheet td.cell{width:40px;height:40px;padding:0;position:relative;background:#c0392b;border:1px solid #a9321f} /* 地板=红底 */
+/* 地板：浅米色，格线淡 */
+table.sheet td.cell{width:40px;height:40px;padding:0;position:relative;background:#eef1f4;border:1px solid #dfe3e8}
 
-/* 墙：白色砖块 */
-td.wall{background:#f5f5f5;border:1px solid #c0392b;
-  background-image:linear-gradient(#dcdcdc 2px,transparent 2px),linear-gradient(90deg,#dcdcdc 2px,transparent 2px);
-  background-size:20px 20px,20px 20px;background-position:0 0;}
-/* 目标点：红底上的蓝色圆点 */
-td.goal::after{content:'';position:absolute;left:50%;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;
-  background:#29b6f6;border-radius:50%;box-shadow:0 0 0 2px #0d8ecf inset;}
-/* 箱子：白底红边、画一个红叉 */
-td.box .sokobox{position:absolute;inset:4px;background:#fff;border:2px solid #c0392b;}
+/* 墙：深灰蓝实心砖块，一眼可辨；砖缝用内阴影表现 */
+td.wall{background:#4a5262;border:1px solid #3a4150;
+  box-shadow:inset 0 0 0 2px #5d6678, inset 3px 3px 0 rgba(255,255,255,.06), inset -3px -3px 0 rgba(0,0,0,.25);}
+/* 目标点：地板上的绿色圆环 */
+td.goal::after{content:'';position:absolute;left:50%;top:50%;width:16px;height:16px;margin:-8px 0 0 -8px;
+  border:3px solid #2fae5f;border-radius:50%;background:rgba(47,174,95,.15);box-sizing:border-box;}
+/* 箱子：暖木色方块 + 对角捆扎线（经典木箱感） */
+td.box .sokobox{position:absolute;inset:4px;background:#d9a441;border:2px solid #a9761f;border-radius:2px;
+  box-shadow:inset 2px 2px 0 rgba(255,255,255,.3), inset -2px -2px 0 rgba(0,0,0,.2);}
 td.box .sokobox::before,td.box .sokobox::after{content:'';position:absolute;left:50%;top:50%;width:2px;height:130%;
-  background:#c0392b;transform-origin:center;}
+  background:#8a5f16;transform-origin:center;}
 td.box .sokobox::before{transform:translate(-50%,-50%) rotate(45deg);}
 td.box .sokobox::after{transform:translate(-50%,-50%) rotate(-45deg);}
-/* 箱子已在目标上：整格变蓝，提示已归位 */
-td.boxok .sokobox{background:#b3e5fc;border-color:#0d8ecf;}
-td.boxok .sokobox::before,td.boxok .sokobox::after{background:#0d8ecf;}
-/* 小人：红帽白衣像素娃 */
+/* 箱子已归位：变绿，提示到位 */
+td.boxok .sokobox{background:#3cc46f;border-color:#25914e;}
+td.boxok .sokobox::before,td.boxok .sokobox::after{background:#1c6d3a;}
+/* 小人：蓝帽米衣像素娃 */
 td.player .sokoman{position:absolute;inset:5px;}
-td.player .sokoman .hat{position:absolute;left:15%;right:15%;top:0;height:38%;background:#e53935;border-radius:6px 6px 0 0;}
+td.player .sokoman .hat{position:absolute;left:15%;right:15%;top:0;height:38%;background:#3b82c4;border-radius:6px 6px 0 0;}
 td.player .sokoman .body{position:absolute;left:20%;right:20%;top:36%;bottom:0;background:#eceff1;border:1px solid #b0bec5;border-radius:3px;}
 td.player .sokoman .face{position:absolute;left:32%;right:32%;top:30%;height:22%;background:#ffe0b2;border-radius:2px;}
 </style>
@@ -77,7 +78,7 @@ td.player .sokoman .face{position:absolute;left:32%;right:32%;top:30%;height:22%
     <button id="resetBtn" style="height:36px;font-size:13px;background:#217346;color:#fff;border:none;border-radius:4px;cursor:pointer">↻ 重排本关 (R)</button>
     <div style="font-size:12px;color:#888;line-height:1.7">
       方向键 / WASD 移动搬运工<br>
-      把所有 <b style="color:#c0392b">红叉箱</b> 推到 <b style="color:#0d8ecf">蓝点</b> 上<br>
+      把所有 <b style="color:#a9761f">木箱</b> 推到 <b style="color:#2fae5f">绿圈</b> 上<br>
       箱子只能推、不能拉（会被墙卡死）<br>
       推错了按 U 撤销 或 R 重来
     </div>
