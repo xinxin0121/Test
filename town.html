@@ -150,6 +150,8 @@ var BUILDINGS = {
           input:{}, output:{silk:6}, cycle:12, tag:'原料'},
   wood:  {name:'木场', ico:'🪵', cat:'raw', desc:'伐木备料，直接产出木材（基础产业，仅需米粮即可开办）', cost:{food:10},
           input:{}, output:{wood:10}, cycle:12, tag:'原料'},
+  stall: {name:'摊摊', ico:'🛒', cat:'sell', desc:'路边摆摊，把米粮直接卖成铜钱（低门槛变现，开局回血）', cost:{food:15},
+          input:{food:6}, output:{coin:14}, cycle:11, tag:'变现'},
   loom:  {name:'织坊', ico:'🧵', cat:'craft', desc:'蚕丝织成布匹', cost:{coin:40,wood:20},
           input:{silk:6}, output:{cloth:4}, cycle:12, tag:'加工'},
   tea:   {name:'茶馆', ico:'🍵', cat:'craft', desc:'米粮制成茶点待客', cost:{coin:50,wood:25},
