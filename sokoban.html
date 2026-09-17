@@ -32,13 +32,14 @@ td.wall{background:#4a5262;border:1px solid #3a4150;
 /* 目标点：地板上的绿色圆环 */
 td.goal::after{content:'';position:absolute;left:50%;top:50%;width:16px;height:16px;margin:-8px 0 0 -8px;
   border:3px solid #2fae5f;border-radius:50%;background:rgba(47,174,95,.15);box-sizing:border-box;}
-/* 箱子：暖木色方块 + 对角捆扎线（经典木箱感） */
-td.box .sokobox{position:absolute;inset:4px;background:#d9a441;border:2px solid #a9761f;border-radius:2px;
+/* 箱子：暖木色方块 + 对角捆扎线（经典木箱感），box 与 boxok 共用基础样式 */
+td.box .sokobox,td.boxok .sokobox{position:absolute;inset:4px;background:#d9a441;border:2px solid #a9761f;border-radius:2px;
   box-shadow:inset 2px 2px 0 rgba(255,255,255,.3), inset -2px -2px 0 rgba(0,0,0,.2);}
-td.box .sokobox::before,td.box .sokobox::after{content:'';position:absolute;left:50%;top:50%;width:2px;height:130%;
+td.box .sokobox::before,td.box .sokobox::after,
+td.boxok .sokobox::before,td.boxok .sokobox::after{content:'';position:absolute;left:50%;top:50%;width:2px;height:130%;
   background:#8a5f16;transform-origin:center;}
-td.box .sokobox::before{transform:translate(-50%,-50%) rotate(45deg);}
-td.box .sokobox::after{transform:translate(-50%,-50%) rotate(-45deg);}
+td.box .sokobox::before,td.boxok .sokobox::before{transform:translate(-50%,-50%) rotate(45deg);}
+td.box .sokobox::after,td.boxok .sokobox::after{transform:translate(-50%,-50%) rotate(-45deg);}
 /* 箱子已归位：变绿，提示到位 */
 td.boxok .sokobox{background:#3cc46f;border-color:#25914e;}
 td.boxok .sokobox::before,td.boxok .sokobox::after{background:#1c6d3a;}
